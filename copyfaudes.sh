@@ -9,10 +9,10 @@
 
 # edit this line to select the libfaudes source location
 #FAUDES_SRC=../libfaudes-2_27a
-FAUDES_SRC=../libfaudes
+FAUDES_SRC=../libFAUDES
 
 # do not change the libfaudes destination
-FAUDES_DST=libfaudes_for_viodes
+FAUDES_DST=libFAUDES_for_viodes
 
 
 ############################################################################
@@ -21,11 +21,13 @@ echo ==================== copyfaudes.sh
 echo "copy, configure and compile libFAUDES for libviodes"
 echo "current directory: " $(pwd)
 echo "importing libFAUDES from " $FAUDES_SRC 
-# note: comment out these lines if you dont want to use lsb compilers
-if [ $(uname -s) == "Linux" ]; then
-export FAUDES_PLATFORM="lsb_linux"
-echo override FAUDES_PLATFORM to use lsb-compilers
-fi
+
+# use lsb compilers on linux
+#if [ $(uname -s) == "Linux" ]; then
+#export FAUDES_PLATFORM="lsb_linux"
+#echo override FAUDES_PLATFORM to use lsb-compilers
+#fi
+
 echo "press return to proceed or ctrl-c to bail out"
 read
 
