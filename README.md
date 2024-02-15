@@ -93,7 +93,7 @@ is expected to be located in `./libVIODES/libFAUDES_for_viodes`. For POSIX syste
 
     ./libVIOEDS> . ./copyfaudes.sh
 
-The script expects a plain libFAUDES next to `./libVIODES`, copies the sources to `./libVIODES/libFAUDES_for_viodes`, sets configuration options and compiles libFAUDES using the libFAUDES `makefile`. The script itself is a bit messy, however, it may serve as a documentation on which configuration options are recommended.  
+The script expects a plain libFAUDES next to `./libVIODES`, copies the sources to `./libVIODES/libFAUDES_for_viodes`, sets configuration options and compiles libFAUDES using the libFAUDES `makefile`. The script is meant as a documentation on which configuration options are recommended, please inspect carefully before execution.  
 
 Once you are set, 
 compiling libVIODES is controlled by the Qt project `./libviodes/viodes.pro`. 
