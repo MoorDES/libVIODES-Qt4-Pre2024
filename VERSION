@@ -2,7 +2,7 @@
 #
 # the version string must not contain whitespace or shell escape characters
 #
-# 201606 tmoor
+# 202401 tmoor
 
 VIODES_VERSION_MAJOR=0
-VIODES_VERSION_MINOR=83
+VIODES_VERSION_MINOR=84
