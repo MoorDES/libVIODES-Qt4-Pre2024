@@ -8,7 +8,7 @@ libFAUDES is readily extendible by deriving new classes for specialized
 synthesis and analysis algorithms. The luabindings plug-in allows easy
 integration of such extension in the scripting environment luafaudes.
 We need a similar approach for libFAUDES based GUI applications. libVIODES
-attempts to fill the gap.
+targets to fill the gap.
 
 * using the libFAUDES type registry as basis
 * having a general model/view approach for faudes::Type
@@ -18,30 +18,30 @@ attempts to fill the gap.
 * make attribute widgets really easy to create
 
 
-## Orgenisation
+## Organisation
 
-viocore: 
+VioCore: 
 
 * base class for configuration classes (VioStyle)
 * base classes for faudes::Type widgets (VioModel, VioWidget)
 * helper for editing faudes symbols 
 * base class for faudes::Attribute* widgets (VioAttributeModel, VioAttributeWidget)
-* qt style plugin for extensions
+* Qt style plugin for extensions
 
-## Configuration
+VioStyle:
 
-There is one static VioStyle that defines visual and faudes related defaults, eg
-colors, fonts and the dot executable path. The VioStyle is also the base class
-for the configuration of visual representations of particular faudes objects.
+* one static instance to configure visual and libFAUDES related defaults, eg
+colors, fonts and the dot executable path
+* classes derived from VioStyle to configure representations of particular faudes objects.
+* all attributes are read initially from a single XML file
 
 ## Qt-Style Models vs faudes::Type
 
-Each faudes object derived from faudes::Type is identified by its faudes type registry 
-name, for short fType. An fType is wrapped in a qt style model which holds additional
+Each faudes object derived from faudes::Type is identified by its name from the faudes type registry for short fType. An fType is wrapped in a Qt-style model to hold additional
 data for visual representation, eg orders of lists or positions of nodes in a graph. 
 The base class for this purpose is VioModel. To allow for a single derivate of VioModel 
 to represent closely related fTypes, vio models are configured by a VioStyle. The latter 
-specifies the fType which the model shall represent, ether read from the configuration 
+specifies the fType which the model shall represent, either read from the configuration 
 file or set programmatically. Eacht derivate of VioModel and each configuration thereof 
 is registered with its fType by the VioTypeRegistry.
 
@@ -61,28 +61,25 @@ to adapt their representation, ie have proper names of checkboxes.
 ## Qt-Style Plug-Ins
 
 To extend libVIODES to display a specific fType, you need to derive corresponding
-VioStyle, VioModel, VioView and VioWidget classes. Via the qt plugin mechanism, 
-you can register your extensons with the VioTypeResistry. There will be a
+VioStyle, VioModel, VioView and VioWidget classes. Via the Qt plugin mechanism, 
+you can register your extensons with the VioTypeResistry. There are
 demo plugins for timed generators and colord markings.
 
 
-###
-plug-in/viogen:
+##
+Plug-In/VioGen:
 
 * plain generator representation (VioGeneratorModel, VioGeneratorWidget)
 * specific generator representation (VioGeneratorList*, VioGeneratorGraph*)
-* specialised qt models/views (Lio*, Gio*)
+* specialised Qt models/views (Lio*, Gio*)
 
 The code of this pluglin is taken from an previous project for graph
-representation (libviogen). As it happens, the old code basis did not
-nicely match the new interface design and there have been quite some 
-glitches in the transition. So dont consider this plugin as a template
-to design your plugin.
+representation (libVIOGen). There are some glitches from the merge, so don,t consider this plugin as a template to design your plugin.
 
 
 ## Tutorial
 
-The tutorial is a simple Qt application "vioedit" that loads VioModels
+The base usaage of libVIODES is demonstrated by the simple Qt application "vioedit" that loads VioModels
 from file and displays the corresponding VioView. It is meant as a basis
 for testing ant debugging.
 
@@ -93,7 +90,7 @@ As a prerequisit, you need a configured and compiled copy of libFAUDES. This
 is expeted to be located in ./libVIODES/libFAUDES_for_viodes. For POSIX environments,
 the script copyfaudes.sh  perfroms this step
 
-./libVIOEDS> . ./copyfaudes.sh
+    ./libVIOEDS> . ./copyfaudes.sh
 
 For Windows, you may manually copy a recent standard libFAUDES distribution or 
 compile and copy manually if you require a particular configuration.
@@ -106,8 +103,8 @@ Qt tollset is within the PATH environment variable. Once you are set,
 compiling libVIODES is controlled by the Qt project file ./libviodes/viodes.pro. 
 To compile use
 
-./libVIODES> qmake viodes.pro
-./libVIODES> make
+    ./libVIODES> qmake viodes.pro
+    ./libVIODES> make
 
 
 ## Authors/Copyright/License
