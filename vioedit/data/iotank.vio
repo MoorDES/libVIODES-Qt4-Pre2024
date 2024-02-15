@@ -1,0 +1,547 @@
+<VioIoSystem>
+<Generator>
+"IoTank"      
+
+% 
+%  Statistics for IoTank
+% 
+%  States:        15
+%  Init/Marked:   1/3
+%  Events:        6
+%  Transitions:   22
+%  StateSymbols:  15
+%  Attrib. E/S/T: 6/15/0
+% 
+
+<Alphabet>
+"take"        +I+           "put"         +I+           "fill"        +I+           
+"clear"       +I+           "ok"          +O+           "fail"        +O+           
+</Alphabet>
+
+<States>
+"Medium"      +I+           "Putting"     +I+           "Overflow"    +I+           
+"Taking"      +I+           "Underflow"   +I+           "smp"         +O+           
+"smt"         +O+           "spp"         +O+           "spt"         +O+           
+"stt"         +O+           "stp"         +O+           "soc"         +O+           
+"sot"         +O+           "suf"         +O+           "sut"         +O+           
+</States>
+
+<TransRel>
+"Medium"      "take"        "smt"         
+"Medium"      "put"         "smp"         
+"Putting"     "take"        "spt"         
+"Putting"     "put"         "spp"         
+"Overflow"    "take"        "sot"         
+"Overflow"    "clear"       "soc"         
+"Taking"      "take"        "stt"         
+"Taking"      "put"         "stp"         
+"Underflow"   "put"         "sut"         
+"Underflow"   "fill"        "suf"         
+"smp"         "ok"          "Putting"     
+"smt"         "ok"          "Taking"      
+"spp"         "ok"          "Putting"     
+"spp"         "fail"        "Overflow"    
+"spt"         "ok"          "Medium"      
+"stt"         "ok"          "Taking"      
+"stt"         "fail"        "Underflow"   
+"stp"         "ok"          "Medium"      
+"soc"         "ok"          "Underflow"   
+"sot"         "ok"          "Medium"      
+"suf"         "ok"          "Overflow"    
+"sut"         "ok"          "Medium"      
+</TransRel>
+
+<InitStates>
+"Medium"      
+</InitStates>
+
+<MarkedStates>
+"Medium"      "Overflow"    "Underflow"   
+</MarkedStates>
+
+
+</Generator>
+<VioModels>
+<TransitionList>
+=AAAAFgEAAAABAAAACAB0AGEAawBlAAAABwEAAAABAAAABgBwAHUAdAAAAAYBAAAAAgAAAAgAdABhAGsAZQAAAAkBAAAAAgAAAAYAcAB1AHQAAAAIAQAAAAMAAAAIAHQAYQBrAGUAAAANAQAAAAMAAAAKAGMAbABlAGEAcgAAAAwBAAAABAAAAAgAdABhAGsAZQAAAAoBAAAABAAAAAYAcAB1AHQAAAALAQAAAAUAAAAGAHAAdQB0AAAADwEAAAAFAAAACABmAGkAbABsAAAADgEAAAAGAAAABABvAGsAAAACAQAAAAcAAAAEAG8AawAAAAQBAAAACAAAAAQAbwBrAAAAAgEAAAAIAAAACABmAGEAaQBsAAAAAwEAAAAJAAAABABvAGsAAAABAQAAAAoAAAAEAG8AawAAAAQBAAAACgAAAAgAZgBhAGkAbAAAAAUBAAAACwAAAAQAbwBrAAAAAQEAAAAMAAAABABvAGsAAAAFAQAAAA0AAAAEAG8AawAAAAEBAAAADgAAAAQAbwBrAAAAAwEAAAAPAAAABABvAGsAAAAB= </TransitionList>
+<StateList>
+=AAAADwIAAAABAgAAAAICAAAAAwIAAAAEAgAAAAUCAAAABgIAAAAHAgAAAAgCAAAACQIAAAAKAgAAAAsCAAAADAIAAAANAgAAAA4CAAAADw=== </StateList>
+<EventList>
+=AAAABgMAAAAIAHQAYQBrAGUDAAAABgBwAHUAdAMAAAAIAGYAaQBsAGwDAAAACgBjAGwAZQBhAHIDAAAABABvAGsDAAAACABmAGEAaQBs= </EventList>
+<GraphData>
+<States>
+<State>
+1             
+<Item>
+<Position>
+169.400001    351.399994    
+</Position>
+<BasePoints>
+0             0             42.600000     42.600000     -131.900001   0             
+-42.597494    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+3             
+<Item>
+<Position>
+790           500           
+</Position>
+<BasePoints>
+0             0             43.450001     43.450001     -50           0             
+-43.460245    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+5             
+<Item>
+<Position>
+890           190           
+</Position>
+<BasePoints>
+0             0             48.449999     48.449999     -50           0             
+-48.504214    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+2             
+<Item>
+<Position>
+490           500           
+</Position>
+<BasePoints>
+0             0             39.250001     39.250001     -50           0             
+-39.237387    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+4             
+<Item>
+<Position>
+540           190           
+</Position>
+<BasePoints>
+0             0             36.750001     36.750001     -50           0             
+-36.774053    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+6             
+<Item>
+<Position>
+318.099999    452.799988    
+</Position>
+<BasePoints>
+0             0             29.249999     29.249999     -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+7             
+<Item>
+<Position>
+340           180           
+</Position>
+<BasePoints>
+0             0             27.550000     27.550000     -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+8             
+<Item>
+<Position>
+634.700012    506.899977    
+</Position>
+<BasePoints>
+0             0             26.750001     26.750001     -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+9             
+<Item>
+<Position>
+350           380           
+</Position>
+<BasePoints>
+0             0             25.049999     25.049999     -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+10            
+<Item>
+<Position>
+720           190           
+</Position>
+<BasePoints>
+0             0             25            25            -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+11            
+<Item>
+<Position>
+360           270           
+</Position>
+<BasePoints>
+0             0             25.049999     25.049999     -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+12            
+<Item>
+<Position>
+780           340           
+</Position>
+<BasePoints>
+0             0             26.750001     26.750001     -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+13            
+<Item>
+<Position>
+680           630           
+</Position>
+<BasePoints>
+0             0             25.049999     25.049999     -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+14            
+<Item>
+<Position>
+860           370           
+</Position>
+<BasePoints>
+0             0             25            25            -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+15            
+<Item>
+<Position>
+750           700           
+</Position>
+<BasePoints>
+0             0             25.049999     25.049999     -50           0             
+-12.521946    0             
+</BasePoints>
+</Item>
+</State>
+</States>
+<TransRel>
+<Trans>
+1             "put"         6             +Line+        
+<Item>
+<Position>
+169.400001    351.399994    
+</Position>
+<BasePoints>
+68.716114     58.961918     0             0             35.214499     24.013113     
+69.238437     47.214372     103.262275    70.415562     138.357765    94.347523     
+148.699999    101.399994    
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+1             "take"        7             +Spline+      
+<Item>
+<Position>
+169.400001    351.399994    
+</Position>
+<BasePoints>
+70            -100          0             0             30.070292     -30.211301    
+73.559588     -73.904531    117.047593    -117.596465   161.785596    -162.544257   
+170.599999    -171.399994   
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+3             "clear"       12            +Line+        
+<Item>
+<Position>
+790           500           
+</Position>
+<BasePoints>
+4.980526      -80.623783    0             0             -2.709953     -43.359251    
+-4.859473     -77.751563    -7.008984     -112.143750   -9.220608     -147.529732   
+-10           -160          
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+3             "take"        13            +Spline+      
+<Item>
+<Position>
+790           500           
+</Position>
+<BasePoints>
+-62.633863    58.540578     0             0             -9.433567     42.451051     
+-20           90            -50           120.000000    -97.661771    127.943629    
+-110          130           
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+5             "fill"        14            +Spline+      
+<Item>
+<Position>
+890           190           
+</Position>
+<BasePoints>
+0             120           0             0             -7.977040     47.862238     
+-14.547656    87.285938     -21.141211    126.847266    -27.942746    167.656478    
+-30           180           
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+5             "put"         15            +Spline+      
+<Item>
+<Position>
+890           190           
+</Position>
+<BasePoints>
+70            290           0             0             29.996969     37.996161     
+150.000000    190.000000    10.000000     440.000000    -128.678866   504.716804    
+-140          510           
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+2             "put"         8             +Line+        
+<Item>
+<Position>
+490           500           
+</Position>
+<BasePoints>
+71.873700     13.438639     0             0             39.213026     1.869861      
+69.896889     3.333012      100.580639    4.796158      132.194236    6.303643      
+144.700012    6.899977      
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+2             "take"        9             +Spline+      
+<Item>
+<Position>
+490           500           
+</Position>
+<BasePoints>
+-70           -90           0             0             -29.851831    -25.587284    
+-62.987695    -53.989453    -96.239063    -82.490625    -130.516840   -111.871577   
+-140          -120          
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+4             "take"        10            +Spline+      
+<Item>
+<Position>
+540           190           
+</Position>
+<BasePoints>
+90            20            0             0             36.717023     0             
+79.925977     0             123.025781    0             167.493439    0             
+180           0             
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+4             "put"         11            +Spline+      
+<Item>
+<Position>
+540           190           
+</Position>
+<BasePoints>
+-100          60            0             0             -33.594858    14.931048     
+-78.212109    34.760938     -122.762109   54.560937     -168.585018   74.926675     
+-180          80            
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+6             "ok"          2             +Line+        
+<Item>
+<Position>
+318.099999    452.799988    
+</Position>
+<BasePoints>
+83.302216     33.243099     0             0             12.049543     3.308543      
+52.276737     14.354058     92.550692     25.412413     134.045177    36.805899     
+171.900001    47.200012     
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+7             "ok"          4             +Line+        
+<Item>
+<Position>
+340           180           
+</Position>
+<BasePoints>
+99.500624     14.987523     0             0             12.487173     0.624359      
+62.224609     3.111230      112.046875    5.602344      163.271618    8.163581      
+200           10            
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+8             "fail"        3             +Line+        
+<Item>
+<Position>
+634.700012    506.899977    
+</Position>
+<BasePoints>
+78.093856     6.540156      0             0             12.511926     -0.555905     
+45.293302     -2.012381     78.074642     -3.468855     111.849481    -4.969471     
+155.299988    -6.899977     
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+8             "ok"          2             +Spline+      
+<Item>
+<Position>
+634.700012    506.899977    
+</Position>
+<BasePoints>
+-70           -40           0             0             -10.018405    -7.513803     
+-40.000000    -30.000000    -90.000000    -30.000000    -108.537590   -22.171505    
+-144.700012   -6.899977     
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+9             "ok"          1             +Line+        
+<Item>
+<Position>
+350           380           
+</Position>
+<BasePoints>
+-88.735880    -24.176922    0             0             -12.360925    -1.957489     
+-54.047724    -8.559055     -95.661562    -15.149066    -138.536546   -21.938793    
+-180.599999   -28.600006    
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+10            "fail"        5             +Line+        
+<Item>
+<Position>
+720           190           
+</Position>
+<BasePoints>
+85            10            0             0             12.509639     0             
+48.528027     0             84.521875     0             121.464668    0             
+170           0             
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+10            "ok"          4             +Spline+      
+<Item>
+<Position>
+720           190           
+</Position>
+<BasePoints>
+-80           -40           0             0             -11.628405    -4.651362     
+-50.000000    -20           -100.000000   -30.000000    -145.583178   -12.906308    
+-180          0             
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+11            "ok"          1             +Line+        
+<Item>
+<Position>
+360           270           
+</Position>
+<BasePoints>
+-99.227543    31.503563     0             0             -11.491763    4.907815      
+-57.637887    24.615549     -103.828605   44.342329     -151.419155   64.666938     
+-190.599999   81.399994     
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+12            "ok"          5             +Line+        
+<Item>
+<Position>
+780           340           
+</Position>
+<BasePoints>
+63.064050     -69.086363    0             0             7.387065      -10.073270    
+31.782910     -43.340332    56.207422     -76.646484    81.372152     -110.962026   
+110           -150          
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+13            "ok"          1             +Spline+      
+<Item>
+<Position>
+680           630           
+</Position>
+<BasePoints>
+-290          -30           0             0             -12.481860    0.624093      
+-200.000000   10.000000     -420.000000   -80.000000    -492.926896   -239.859626   
+-510.599999   -278.600006   
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+14            "ok"          3             +Spline+      
+<Item>
+<Position>
+860           370           
+</Position>
+<BasePoints>
+-10           60            0             0             -5.935952     11.023911     
+-20.260352    37.626367     -34.607617    64.271289     -49.370445    91.687970     
+-70           130           
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+15            "ok"          1             +Spline+      
+<Item>
+<Position>
+750           700           
+</Position>
+<BasePoints>
+-390          -10           0             0             -12.481315    -1.040110     
+-240.000000   -20.000000    -590.000000   60.000000     -581.579091   -306.040779   
+-580.599999   -348.600006   
+</BasePoints>
+</Item>
+</Trans>
+</TransRel>
+</GraphData>
+</VioModels>
+<VioLayout>
+0             =AAAA/wAAAAAAAAADAAAAyAAAAlgAAAAAAQAAAAYBAAAAAQ=== 0             150           1187          1             
+</VioLayout>
+</VioIoSystem>

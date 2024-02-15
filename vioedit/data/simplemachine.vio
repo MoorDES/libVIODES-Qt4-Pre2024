@@ -1,0 +1,152 @@
+<VioSystem>
+<Generator>
+"Generator"   
+
+% 
+%  Statistics for Generator
+% 
+%  States:        3
+%  Init/Marked:   1/1
+%  Events:        7
+%  Transitions:   4
+%  StateSymbols:  3
+%  Attrib. E/S/T: 2/0/0
+% 
+
+<Alphabet>
+"alpha"       +C+           "beta"        "mue"         "lambda"      +C+           
+"JEDOCH"      "JEIST"       "EGAL"        
+</Alphabet>
+
+<States>
+"idle"        "busy"        "down"        
+</States>
+
+<TransRel>
+"idle"        "alpha"       "busy"        
+"busy"        "beta"        "idle"        
+"busy"        "mue"         "down"        
+"down"        "lambda"      "idle"        
+</TransRel>
+
+<InitStates>
+"idle"        
+</InitStates>
+
+<MarkedStates>
+"idle"        
+</MarkedStates>
+
+
+</Generator>
+<VioModels>
+<TransitionList>
+=AAAABAEAAAABAAAACgBhAGwAcABoAGEAAAACAQAAAAIAAAAIAGIAZQB0AGEAAAABAQAAAAIAAAAGAG0AdQBlAAAAAwEAAAADAAAADABsAGEAbQBiAGQAYQAAAAE== </TransitionList>
+<StateList>
+=AAAAAwIAAAABAgAAAAICAAAAAw=== </StateList>
+<EventList>
+=AAAABwMAAAAKAGEAbABwAGgAYQMAAAAIAGIAZQB0AGEDAAAABgBtAHUAZQMAAAAMAGwAYQBtAGIAZABhAwAAAAwASgBFAEQATwBDAEgDAAAACgBKAEUASQBTAFQDAAAACABFAEcAQQBM= </EventList>
+<GraphData>
+<States>
+<State>
+1             
+<Item>
+<Position>
+30.599999     63.900000     
+</Position>
+<BasePoints>
+0             0             30.899999     30.899999     -50           0             
+-30.909061    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+2             
+<Item>
+<Position>
+166.700006    30.599999     
+</Position>
+<BasePoints>
+0             0             30.899999     30.899999     -50           0             
+-30.909061    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+3             
+<Item>
+<Position>
+302.800012    79.200000     
+</Position>
+<BasePoints>
+0             0             30.899999     30.899999     -50           0             
+-30.909061    0             
+</BasePoints>
+</Item>
+</State>
+</States>
+<TransRel>
+<Trans>
+1             "alpha"       2             
+<Item>
+<Position>
+30.599999     63.900000     
+</Position>
+<BasePoints>
+68.000001     -38.900000    0             0             27.672792     -13.886346    
+36.100000     -18.099999    45.800000     -22.200000    55.500001     -25           
+68.000001     -27.800000    80.499995     -29.200000    105.228790    -31.426915    
+136.100006    -33.300000    
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+2             "beta"        1             
+<Item>
+<Position>
+166.700006    30.599999     
+</Position>
+<BasePoints>
+-68.100005    30.500001     0             0             -21.928982    21.830641     
+-30.600011    29.100001     -43.100011    37.500000     -55.600011    41.600001     
+-68.100005    45.800000     -80.600005    45.800000     -106.188815   41.021261     
+-136.100006   33.300000     
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+2             "mue"         3             
+<Item>
+<Position>
+166.700006    30.599999     
+</Position>
+<BasePoints>
+67.999983     11.100000     0             0             29.327666     9.775893      
+48.600006     16.600001     73.600006     26.300001     106.960213    38.255718     
+136.100006    48.600000     
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+3             "lambda"      1             
+<Item>
+<Position>
+302.800012    79.200000     
+</Position>
+<BasePoints>
+-136.100006   6.900001      0             0             -30.122336    6.792287      
+-51.400018    11.100000     -79.200006    16.600001     -105.600011   18.000001     
+-132.000017   20.800000     -138.900006   22.200006     -166.700017   18.000001     
+-188.900006   15.200001     -194.500017   11.100000     -216.700011   4.100001      
+-220.900011   2.700001      -225.000012   1.400000      -243.042589   -4.925382     
+-272.200012   -15.300000    
+</BasePoints>
+</Item>
+</Trans>
+</TransRel>
+</GraphData>
+</VioModels>
+<VioLayout>
+0             =AAAA/wAAAAAAAAADAAAAyAAAAlgAAAAAAQAAAAQBAAAAAQ=== 0             150           607           1             
+</VioLayout>
+</VioSystem>

@@ -1,0 +1,990 @@
+THE QT-APPLICATION-WITH-LSB-SCRATCHPAD
+
+============================================================================================
+
+HISTRORY / OBJECTIVE
+
+============================================================================================
+
+Objective: we want to deploy a Linux binary of eg libVIODES or DESTool that runs
+on all mainstream linux distributions. Thus, we need to somehow circumvent
+the situation that our binary refers to symbols in local shared libraries that
+are not present on the unknown target system.
+
+Technology: targeting precisely our objective, there is the Linux Standard Base (lsb)
+SDK. It comes with a set of g++ wrappers, standarised include files and standarised
+system library stubs. Using the g++ wrappers (aka lsbc++, lsbcc) in the build
+process prevents to link to the actual system libraries but links against the
+standardised stubs. Any Linux distribution that is complient to lsb can resolve the
+symbols and thus run our binaries.
+
+Challange: Since we use a recent version of Qt, we need to compile the entire
+Qt system with the lsb sdk, and then deploy our project (eg DESTool) with the 
+lsb made Qt. Since Qt, lsb and the underlying GCC come in various versions, and 
+since Qt relies on a number of system libs that come in versions too, the overall
+buil process is a nightmare. The result, however, seems worth the effort: if we
+fight all possible shared library mismatches effectively, the customer will be happy.
+
+Strategy: We use a minimal Qt with just those options we really need (no CUPS,
+no tablet support, no OpenGl ...). We systematically try lsb 3.0, lsb 3.1, lsb 3.2 
+and lsb 4.0, the lowest number is least demanding and hence wins. We report errors 
+and grade of success.
+
+Histoty: we started this investigation at about 2008 for the first distribution of
+DESTool. Back then we obtained compatibility for common Linux distributions dated
+2005. As of 2011 we finally updated the required glibc and dropped compatinbility
+for systems dated earlier than about 2006. Since DESTool still uses the Qt 4.4.2
+series, and since thq Qt 4 series has been frozen to Qt 4.8.7 in 2015, we could now
+(date of writing: 2016) risk to distribute DESTool without our dedicated LSB 
+version of Qt. However, we will on some day upgrade to Qt series 5 and go through 
+the same process again. Also, we never know when the next breaking glibc update will 
+hit us. In the mean time we are not quite sure whether LSB is the appropriate technology 
+for our purposes, since we have observed that some quite common distributions do not 
+bother to install LSB loaders by default. 
+
+*** To this end: any suggestions regarding Linux binary deployment are wellcome ***
+
+Thomas Moor, February 2016
+
+
+===========================================================================================
+
+BUILDING LSB CONFORM QT
+
+===========================================================================================
+
+GENERAL
+
+Qt configuration is partly option driven, partly automatic. Some automatic behaviour
+overwrites options, others dont. Use the "-v" option to configure Qt and inspect the
+results carefully. 
+
+Use the lsb-sdk with appropriate version as provided by the Linux Foundation (dont 
+install some package from your distribution)
+
+Since Ubuntu 10.04 LTS (2011), we have observed broken Qt configurations (dropping
+switches like QT_NO_CUPS etc). Thus, "make confclean" and "make distclean" may fail. 
+
+We now
+- ALLWAYS have a fresh shell/emacs to reset environment variables
+- ALLWAYS start from scartch: 1) plain vanila qt sources 2) apply your
+  patches 3) configure 4) compile/install 
+
+===========================================================================================
+TO LINK AGAINST LSB 3.0 (2006 on wombat - historic - no chance)
+
+lsb 3.0 with qt 4.4.2 on a gcc 4.02 lsb 3.0 system (ie suse 10.0)
+
+qt configuration:
+
+./configure -v -release -prefix /usr/local/Trolltech/Qt-4.4.2-lsb-3.0 -platform linux-lsb-g++ -no-sse -no-sse2 -no-qt3support -no-pch -no-largefile -no-accessibility -no-xmlpatterns -no-openssl -no-tablet -no-xrandr -no-sm -no-libmng -no-libpng -no-webkit -no-gif -no-cups -no-phonon -no-fontconfig
+
+core issue: references to _chk symbols in sytem libraries, eg memcpy_chk in freetype;
+strategy: use qt provided libs whereever possible since they will be linked against
+lsb stubs and hence will not refer to  _chk symbols; perhaps a better solution
+would be to rebuild system libraries within the lsb sdk; perhaps this is all
+for our gcc not accepting "no-stack-protection" ??
+
+freetype/fontconfig/xrender: we need those to produce nice text output in QtGui; however,
+the system freetype and fontconfig refer to the _chk symbols, so we cannot use them; 
+luckily, there is a qt freetype provided; however, fontconfig implies system freetype, 
+so we need to disable fontconfig; to have freetype even without fontfonfig, use
+
+***  "CFG_LIBFREETYPE=yes" in ./configure, line 514, 
+
+minor issue: our gcc wont use the provided CFLAGS; this probably indicates that we need 
+a newer gcc, perhaps to turn of the stack checking features; pragmatically:
+
+*** in mkspecs/linux-lsb-g++/qmake.conf  fix the CFLAGS
+
+minor issue: lsb 3.0 options are to be passed via env variables, not commandline options;
+
+*** export the following:
+export PATH=$PATH:/opt/lsb/bin
+export LSBCC_SHAREDLIBS=QtNetwork:QtCore:QtGui:QtSvg:QtXml:QtSql:QtCLucene:QtHelp:QtScript:QtDesigner:QtDesignerComponents:QtOpenGL:QtAssistantClient:QtTest:jpeg
+export LSBCC_INCLUDES=/opt/lsb/include
+export LSBCXX_INCLUDES=/opt/lsb/include/c++
+export LSBCC_LIBS=/opt/lsb/lib
+
+open issue: some part of the Qt filesystemwhatcher needs some systemcalls that are not
+available in lsb; we dont understand the details here, just 
+
+*** comment out relevant src/core/io/_dnotify.cpp (use "continue" to disalbe code segment from line 238)
+
+cluence: this third party package is misconfigured for lsb 3.0 in that it feels the
+existence of a not existent typedef; fixed by
+
+*** 3rdparty/CLuence/ComplierGcc.h, have a "undef _CL_HAVE_FLOAT_T" at the very end
+
+overall status: compiles all examples and viogen/DESTool; however: no fontconfig, no good;
+no png, no good
+
+
+
+===========================================================================================
+TO LINK AGAINST LSB 3.1 (2006 wombat - historic - no chance)
+
+lsb 3.1 with qt 4.4.2 on a gcc 4.02 lsb 3.0 system (i.e. suse 10.0)
+
+lsb-sdk install: 
+
+lsb 3.1 includes some Qt lib, but not the desired version: therefore,
+we install the sdk without Qt options, and remove libQt*.
+
+qt configuration:
+
+./configure -v -release -prefix /usr/local/Trolltech/Qt-4.4.2-lsb-3.1 -platform linux-lsb-g++ -no-sse -no-sse2 -no-qt3support -no-pch -no-largefile -no-accessibility -no-xmlpatterns -no-openssl -no-tablet -no-xrandr -no-sm -no-libmng -no-libpng -no-webkit -no-gif -no-cups -no-phonon -no-opengl -no-xrender 
+
+fontconfig/freetype and xrender: there is still no xrender but there is a fontconfig;
+thus, we combine the qt freetype with the lsb fontconfig; since fontconfig implies
+system freetype, we hack the configure script:
+
+***  "CFG_LIBFREETYPE=yes" in ./configure, line 514, 
+
+*** line 4561:
+      QMakeVar set QMAKE_LIBS_X11 '-lfontconfig $$QMAKE_LIBS_X11'
+      CFG_LIBFREETYPE=yes
+
+*** include path detection in config.tests/unix/freetype/freetype.pri used in other qt modules (eg opengl)
+
+    #for(p, TRY_INCLUDEPATHS) {
+    #    p = $$join(p, "", "", "/freetype2")
+    #    exists($$p):INCLUDEPATH *= $$p
+    #}
+    INCLUDEPATH *= ../3rdparty/freetype/include 
+    INCLUDEPATH *= ../../../3rdparty/freetype/include 
+
+***  in mkspecs fix shared libs 
+
+  since we do not plan to use lsb provided Qt, we need to indicate them as alien
+  shared libraries; for lsb 3.1 this is with a compile time option
+
+   QMAKE_LFLAGS		= --lsb-shared-libs=QtNetwork:QtCore:QtGui:QtSvg:QtXml:QtSql:QtCLucene:QtHelp:QtScript:QtDesigner:QtDesignerComponents:QtOpenGL:QtAssistantClient:QtTest
+
+*** lsb binaries: we need the path
+
+export PATH=$PATH:/opt/lsb/bin
+
+overall status: compiles all but opengl examples: opengl examples fail because the qt freetype is linked
+in QtGui but not made available to other modules (perhaps due to the -fvisibility=hidden); since we 
+dont need opengl, the pragmatic fix is to configure  no-opengl; DESTool and viogen compile, but: 
+no xrender, no good; no png no good
+ 
+
+
+============================================================================================
+TO LINK AGAINST LSB 3.2 (2006 wombat - first success - this was used for DESTool deployment 2008-2011)
+
+lsb 3.2 with qt 4.4.2 on a gcc 4.02 lsb 3.0 system (e.g. suse 10.0)
+
+qt configuration:
+
+./configure -v -release -prefix /usr/local/Trolltech/Qt-4.4.2-lsb-3.2 -platform linux-lsb-g++ -no-sse -no-sse2 -no-qt3support -no-pch -no-largefile -no-accessibility -no-xmlpatterns -no-openssl -no-tablet -no-xrandr -no-sm -no-libmng -no-gif -no-cups -no-phonon -no-opengl -assistant-webkit
+
+freetype and co: lsb 3.2 includes xrender and both freetype and fontconfig; however, lsb freetype 
+wont compile; so we need to use the qt freetype by the same hacks as above lsb 3.1
+
+*** temper include path detection in config.tests/unix/freetype/freetype.pri
+
+    #for(p, TRY_INCLUDEPATHS) {
+    #    p = $$join(p, "", "", "/freetype2")
+    #    exists($$p):INCLUDEPATH *= $$p
+    #}
+    INCLUDEPATH *= ../3rdparty/freetype/include 
+    INCLUDEPATH *= ../../../3rdparty/freetype/include 
+
+*** hack configure script as in lsb 3.1
+
+*** set lsb options in qmake.conf as in lsb 3.1
+
+*** libpng
+   
+    we do need png for button images and so on; however, lsb 3.2 png has no
+    pngconf.h; but lsb 3.2 has some png_info_structfix
+
+    comment out include "pngconf", src/gui/imahes/qpnghandler.cpp, line 34
+    fix lsb adjusts: remove all #ifdef QT_LSB section, line 51ff
+    add jmp buf makro
+    
+    #ifdef PNG_SETJMP_SUPPORTED
+    #  define png_jmpbuf(png_ptr) ((png_ptr)->jmpbuf)
+    #else
+    #  define png_jmpbuf(png_ptr) \
+       (LIBPNG_WAS_COMPILED_WITH__PNG_SETJMP_NOT_SUPPORTED)
+    #endif
+
+
+*** webkit
+
+   we do want webkit as help browser (?); however, pthread_getattr_np is not in lsb 3.2;
+   pthread is required in kjs (javascript), and can fix is by commenting out; however, we should
+   really then disable javascript (otherwise we risk a segfault/assertion fail)
+
+   in 3rdparty/webkit/JavaScriptCore/kjs/collector.cpp, line 355 comment out pthread_getattr_np
+
+*** overall status: 
+   viogen compiles and runs fine; todo: do use lsb freetype, fix javascript
+   anyway: this version was used to ship DESTool 2006-2011, up to version 0.61 :-) 
+
+*** archive
+
+   the configured and compiled source tree as been rescued from wombat; to re-use it in binary
+   form, run "make install" 
+ 
+   qt-x11-commercial-src-4.4.2-lsb-3.2-wombat.tar.gz
+
+
+============================================================================================
+
+TO LINK AGAINST LSB 3.2 (2011 version on DESTool - this was used for DESTool deployment 2011-2014)
+
+lsb 3.2 with qt 4.4.2 on a gcc 4.4.3 lsb 4.0 system with lsb-sdk-4.1.1 (e.g. ubuntu 10.04 lts) 
+
+*** lsb install: use install skript for complete install
+
+*** We started of with plain qt source and applies the patches lsb 3.2 from wombat 
+
+- src/corelib/io/qfilesystemwatcher_dnotify.cpp
+- src/gui/image/qpnghandler.cpp
+- config.tests/unix/freetype/freetype.pri
+- src/3rdparty/webkit/JavaScriptCore/kjs/collector.cpp
+- ./configure
+
+
+*** fix mkspecs to explicitly set lsb version 
+
+    QMAKE_CXX = lsbc++ --lsb-target-version=3.2  (search for all lsbc++ / lsbcc )
+
+    in a 2014 second go with lsb-sdk-4.1.7, we added (not in the patch archieve)
+
+    QMAKE_LINK        = lsbc++ --lsb-target-version=4.0  --lsb-besteffort
+    QMAKE_LINK_SHLIB  = lsbc++ --lsb-target-version=4.0  --lsb-besteffort
+
+
+*** fixe mkspecs to accept my shared qt (note also the "-as-needed")
+
+    QMAKE_LFLAGS            = --lsb-shared-libs=QtWebKit:QtNetwork:QtCore:QtGui:QtSvg:QtXml:QtSql:QtCLucene:QtHelp:QtScript:QtDesigner:QtDesignerComponents:QtOpenGL:QtAssistantClient:QtTest -Wl,-as-needed
+
+*** build key
+
+    we set a neutral build key, so that our viodes plug-ins get also loaded from 
+    std qt distributions; for this to work, we must fix ./configure, line 5689
+
+    QT_BUILD_KEY="$CFG_USER_BUILD_KEY"
+
+
+*** archive
+
+    unconfigured plain result of the so far pached qt sources is archived in 
+    qt-x11-commercial-src-4.4.2-lsb-3.2-patched.tar.gz
+    
+*** configure  (with lrt 4.4.2 license key BGKX-FM5-34M-2CX-WG46X-RQ987-AE11)
+
+./configure -v -release -prefix /opt/qt-4.4.2-lsb-3.2 -buildkey "i386 linux g++-4 full-config" -platform linux-lsb-g++ -no-sse -no-sse2 -no-qt3support -no-pch -no-largefile -no-accessibility -no-xmlpatterns -no-openssl -no-tablet -no-xrandr -no-sm -no-libmng -no-gif -no-cups -no-openssl -no-phonon -no-opengl -webkit -assistant-webkit
+
+compilations fails due to XA_ATOM (and friends) undefined for lsb 3.2; we do not understand the
+details, since we did compile for lsb 3.2 on wombat; one can actually observe
+Xatom.h to only define XA_ATOM on lsb >= 4.0; inspection on wombat shows that it actually
+includes system X11 headers as opposed to lsb versions; there are more such missing symbols,
+whenever it comes to X11 includes; to compile, one can cheat the lsb version during X11 include,
+but this is really bad: 
+
+#undef __LSB_VERSION__
+#define __LSB_VERSION__ 40
+include <X11/XKBlib.h>
+#undef __LSB_VERSION__
+#define __LSB_VERSION__ 32
+
+relevant files are
+
+- src/gui/kernel/qcursor_x11.cpp
+- src/gui/kernel/qkeymapper_x11.cpp
+- src/gui/kernel/qt_x11_p.h
+
+  this is not applied in the patch archive, but ready to be copied in place
+
+*** original 32-bit for ubuntu 10.04 lts
+
+./configure -v -release -prefix /opt/qt-4.4.2-lsb-3.2 -buildkey "i386 linux g++-4 full-config" -platform linux-lsb-g++ -no-sse -no-sse2 -no-qt3support -no-pch -no-largefile -no-accessibility -xmlpatterns -exceptions -no-openssl -no-tablet -no-xrandr -no-sm -no-libmng -no-gif -no-cups -no-openssl -no-phonon -no-opengl -webkit -assistant-webkit -no-glib -no-xkb -no-xcursor
+
+***  libpng15 isuue
+  in a 2014 second go, we had unresolved dependencies with libpng15, which is not on our ubuntu 10.04.lts 
+  but the stubs come with the lsb-sdk-4.1.7, preparing for lsb 5.0; this must be some sort of an error in the
+  sdk, since libpng15 is not part of the specs up to and including 4.0; we hacked the sdk by removing all
+  references to "png15" (removing lib-5.0 and "cp -a lib-4.0 lib-5.0" and hex-editing comiplers)
+
+*** overall status: 
+   viogen compiles and runs fine; todo: do use lsb freetype, fix javascript
+   anyway: this version was used to ship DESTool 2011-2013, up to version 0.75 :-) 
+
+*** archive
+
+  the patched and unconfigured (by "make confclean") source is available as 
+
+  qt-x11-commercial-src-4.4.2-lsb-3.2-u1004lts.tar.gz
+
+
+*** 64bit for debian 7.4
+
+./configure -v -release -prefix /opt/qt-4.4.2-lsb-3.2 -buildkey "x86_64 linux g++-4 full-config" -platform linux-lsb-g++ -no-sse -no-sse2 -no-qt3support -no-pch -no-largefile -no-accessibility -xmlpatterns -exceptions -no-openssl -no-tablet -no-xrandr -no-sm -no-libmng -no-gif -no-cups -no-openssl -no-phonon -no-opengl -webkit -assistant-webkit -no-glib -no-xkb -no-xcursor
+
++ searh/rep /opt/lsb/lib in /opt/lsb/lib64  in qt_functions.prf  (or set it in qmake.conf?)  (not in patch!)
++ add -fpermissive to  CFLAGS in qmake.conf (not in patch!)
++ above libpng15 issue, (removing lib-5.0, grep for png15 etc ... no need for hex-editing comiplers)
+
+=============================================================================================
+
+TO LINK AGAINST LSB 4.0 (2014 version on DESTool -- preparing 64bit migration)
+
+lsb 4.0 with qt 4.8.5 on a gcc 4.4.3 lsb 4.0 system with lsb-sdk-4.1.7 (aka ubuntu 10.04 lts) 
+
+*** start with plain qt source "qt-everywhere-opensource-4.8.5.tgz"
+
+*** lsb install: use install skript for complete install
+
+*** set environment to locate lsb compilers
+
+  export PATH=$PATH:/opt/lsb/bin
+
+*** fix "mkspecs/linux-lsb-g++" to explicitly set lsb version 4.0 and to accept my own shared qt libs
+
+  set explicit target version to lsb 4.0 
+
+  QMAKE_CC          = lsbcc --lsb-target-version=4.0    
+  QMAKE_CXX         = lsbc++ --lsb-target-version=4.0    
+
+  set fallback dynamic loader for target systems without lsb support
+
+  QMAKE_LINK        = lsbc++ --lsb-target-version=4.0  --lsb-besteffort
+  QMAKE_LINK_SHLIB  = lsbc++ --lsb-target-version=4.0  --lsb-besteffort
+
+  for the besteffort option to compile, the linker needs to find besteffor.o provided by lsb;
+  pargmatically
+
+  cp /opt/lsb/lib/besteffort.o  QTSOURCEPATH/lib/
+
+  explicitly link to dynamic libs to make lsb linker figure relevant libraries
+
+  QMAKE_LIBS		= -Wl,-as-needed -lrt -lz -lm -ldl -lX11 -lXrender -lXext -lfontconfig -lfreetype
+
+
+*** configure options
+
+  - use "-qt-libpng" to bypass missing "pngcpnf.h" in lsb system png
+  - don't say anythin on "sse", let configure figure it (will turn it all on)
+  - configure as open source since we dont have a commercial license for 4.8.5 (will be prompted)
+  - use "no-cups", "-no-opengl" since we dont need it
+  - use "-no-javascript-jit", "-no-openssl" since they wont compile
+
+*** freetype fix: 
+
+  lsb 4.0 includes xrender, freetype and fontconfig - fine; however, qt wont compile with 
+  lsb system freetype for missinterpreting its version/capabilities; we therefore manually disable access 
+  to certain freetype features
+
+  file "src/gui/text/qfontengine_ft.cpp" line 106ff
+
+  /* FreeType 2.1.10 starts to provide FT_GlyphSlot_Embolden */
+  //#if (FREETYPE_MAJOR*10000+FREETYPE_MINOR*100+FREETYPE_PATCH) >= 20110
+  //#define Q_FT_GLYPHSLOT_EMBOLDEN(slot)   FT_GlyphSlot_Embolden(slot)
+  //#else
+  //#define Q_FT_GLYPHSLOT_EMBOLDEN(slot) 
+  //#endif
+  #define Q_FT_GLYPHSLOT_EMBOLDEN(slot) 
+
+*** javascript fix
+
+  the provided javascript tests the GCC version for advanced configuration; however, the test is 
+  miss-evaluated for lsb compilers; thus, we manually disable the extra features; since Qt provides
+  two sets of javascript sources, fixes are applied in twice
+
+  file "src/3rdparty/javascriptcore/JavaScriptCore/wtf/Threading.h" line 81ff
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/Atomics.h" line 73ff
+
+  //#if (__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 2))  
+  //#include <ext/atomicity.h> 
+  //#else  
+  //#include <bits/atomicity.h>
+  //#endif          
+  #include <bits/atomicity.h>
+
+  file "src/3rdparty/javascriptcore/JavaScriptCore/wtf/Platform.h" line 699
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/Platform.h" line 774
+
+  #define HAVE_TIMEGM 0  
+
+  the javascript runtime refers to "pthread_getattr_np" which is available only in lsb 4.1;
+  there is the suggestion to fix this by loading the symbol dynamically; since we do not need
+  javescript anyway, we pragmatically comment out the problematic function alltogether; this
+  will crash qt when executing javascript (we should put an assertion for notification)
+
+  file "src/3rdparty/javascriptcore/JavaScriptCore/runtime/Collector.cpp" line 662
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/StackBounds.cpp" line 173
+  file "src/3rdparty/webkit/Source/JavaScriptCore/heap/MachineStackMarker.cpp" line 387
+
+  compact replcament code for "pthread_getattr_np" by dynamic lookup (should have mutex?)
+
+  // E.g. to Collector.cpp line 109, i.e. within namespace
+  #include<dlfcn.h> 
+  int pthread_getattr_np(pthread_t thread, pthread_attr_t * attr) {
+    typedef int (*PthreadGetattrNp)(pthread_t,pthread_attr_t*);
+    static  PthreadGetattrNp pthread_getattr_np_ptr = NULL; 
+    if(pthread_getattr_np_ptr==NULL)
+      pthread_getattr_np_ptr =
+        reinterpret_cast<PthreadGetattrNp>(dlsym(RTLD_DEFAULT, "pthread_getattr_np"));
+    ASSERT(pthread_getattr_np_ptr!=NULL); 
+    return pthread_getattr_np_ptr(thread,attr);
+  }
+
+
+  presumably harmless features missing here
+
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/OSAllocatorPosix.cpp" line 76
+
+  // flags |= MAP_NORESERVE;
+
+  file "src/3rdparty/webkit/Source/WebCore/platform/sql/SQLiteFileSystem.cpp" line 43
+
+  #ifndef PRIx64
+  #define PRIx64 "llx"
+  #endif
+
+*** core libraray
+
+  thread local storage is no available in lsb 4.0 but is detected by macros/configure;
+  we need to disable this feature
+
+  file "src/corelib/thread/qthread_unix.cpp" line 118
+  //#define HAVE_TLS
+
+** buildkey
+
+   to allow non-lsb qt installations to load my plugins viogen etc, set a generic build key;
+   overwrite qt by patchinh ./configure line 8172
+
+   QT_BUILD_KEY="$CFG_USER_BUILD_KEY"
+   QT_BUILD_KEY_COMPAT="$CFG_USER_BUILD_KEY"
+
+
+*** configure command (original)
+
+./configure -v -release -prefix /opt/qt-4.8.5-lsb-4.0 -buildkey "i386 linux g++-4 full-config" -platform linux-lsb-g++ -no-qt3support -no-pch -no-largefile -no-accessibility -no-xrandr -no-sm -no-libmng -no-gif -qt-libpng -no-cups -no-openssl -no-phonon -no-opengl -no-javascript-jit -no-declarative -no-dbus -no-script -no-scripttools -no-multimedia -webkit -nomake demos -nomake translations 
+
+
+for a first basic test, additional options may include
+
+  -no-webkit -nomake tools -nomake demos -nomake translations -nomake docs -no-gui
+
+*** overall status 
+
+  - qt compiles fine
+  - using a 2010 Ubuntu 10.04 to compile gets in a dependency with glibc 2.4 which prevents 
+    execution on 2005 suse 10; this is ok in 2014;
+  - moving to qt 4.8.5 makes webkit/javascript the main challenge
+
+================================================================================================
+
+TO LINK AGAINST LSB 3.2 (2014 version on DESTool -- preparing 64bit migration)
+
+lsb 3.2 with qt 4.8.5 on a gcc 4.4.3 lsb 4.0 system with lsb-sdk-4.1.7 (aka ubuntu 10.04 lts) 
+
+*** start with the above lsb 4.0 patched qt 4.8.5
+
+*** remove no-lsb-3.2 lock
+
+  file "src/corelib/global/qglobal.h" line 339
+
+   //#  if __LSB_VERSION__ < 40                                   
+   //#    error "This version of the Linux Standard Base is unsupported"                          
+   //#  endif                                                              
+
+
+*** filesystem watcher wont work -- disable
+
+  file "src/corelib/io/qfilesystemwatcher_dnotify.cpp" line 256 insert 
+  continue; // and comment out remaining if clause
+
+*** would need x11 patches on lsb 4.0 ... this is pointless, we then go directly for lsb 4.0
+
+
+=============================================================================================
+
+TO LINK AGAINST LSB 4.0 (2016 version on DESTool -- 64bit migration used for deployment 2016)
+
+lsb 4.0 with qt 4.8.7 on a gcc 4.7.2 lsb 4.0 system with lsb-sdk-4.1.7 (aka debian 7.4) 
+
+*** process
+
+   start with plain qt source "qt-everywhere-opensource-4.8.7.tgz"
+   mark all changes with "lsb/tm", try to be careful not to affect other architectures 
+   never ever configure/build the source tree directly --- allways do this in a copy
+
+*** LSB install: use install skript for complete install, move to /usr/opt/lsb
+
+*** set environment to locate lsb compilers 
+
+  export PATH=$PATH:/opt/lsb/bin
+
+*** fix "mkspecs/linux-lsb-g++" to explicitly set lsb version 4.0 
+
+  (alternatively, we could have our own specs"mkspecs/linux-lsb-g++-faudes")
+
+  set explicit target version to lsb 4.0 
+
+  QMAKE_CC = lsbcc --lsb-target-version=4.0    
+  QMAKE_CXX = lsbc++ --lsb-target-version=4.0    
+
+  set fallback dynamic loader for target systems without lsb support
+
+  QMAKE_LINK = lsbc++ --lsb-target-version=4.0  --lsb-besteffort
+  QMAKE_LINK_SHLIB  = lsbc++ --lsb-target-version=4.0  --lsb-besteffort
+
+  for the besteffort option to compile, the linker needs to find besteffor.o provided by lsb;
+  pargmatically
+
+  cp /opt/lsb/lib64-4.0/besteffort.o QTSOURCEPATH/lib/
+
+  explicitly link to dynamic libs to make lsb linker figure relevant stubs
+
+  QMAKE_LIBS = -Wl,-as-needed -lrt -lz -lm -ldl -lX11 -lXrender -lXext -lfontconfig -lfreetype
+ 
+  explicitly direct to 64-bit library stubs in version 4.0 (could also set a link in /opt/lsb)
+
+  QMAKE_LIBDIR = /opt/lsb/lib64-4.0 
+  QMAKE_LIBDIR_X11 = /opt/lsb/lib64-4.0 
+  QMAKE_LIBDIR_OPENGL = /opt/lsb/lib64-4.0
+
+  QMAKE_CFLAGS = -m64
+  QMAKE_LFLAGS = -m64
+
+  follow up in "mkspecs/features_qt_functions.prf"
+  
+  QMAKE_LFLAGS *= -L/opt/lsb/lib64-4.0    
+
+
+*** configure options
+
+  - use "-qt-libpng" to bypass missing "pngcpnf.h" in lsb system png
+  - don't say anything on "sse", let configure figure it (will turn it all on)
+  - configure as open source since we dont have a commercial license for 4.8.7 (will be prompted)
+  - use "-no-cups", "-no-opengl" since we dont need it
+  - use "-no-javascript-jit", "-no-openssl" since they wont compile
+  - command line given below
+
+*** qglobal.h --- may want to fix the QT_LINUXBASE macro (?)
+
+*** freetype fix: 
+
+  LSB 4.0 includes xrender, freetype and fontconfig - fine; however, qt wont compile with 
+  LSB system freetype for missinterpreting its version/capabilities; in fact, to my best
+  knowledge freetype 2.1.10 does *not* provide FT_GlyphSlot_Embolden. I therefore manually
+  disable access to that features
+
+  file "src/gui/text/qfontengine_ft.cpp" line 100ff
+
+  /* FreeType 2.1.10 starts to provide FT_GlyphSlot_Embolden */
+  #if (FREETYPE_MAJOR*10000+FREETYPE_MINOR*100+FREETYPE_PATCH) >= 20110
+  #define Q_FT_GLYPHSLOT_EMBOLDEN(slot)   FT_GlyphSlot_Embolden(slot)
+  #else
+  #define Q_FT_GLYPHSLOT_EMBOLDEN(slot) 
+  #endif
+
+  /* lsb/tm: override for LSB 4.0 */
+  #if defined (__LSB_VERSION__) && ( __LSB_VERSION__ <= 40 )
+  #undef Q_FT_GLYPHSLOT_EMBOLDEN 
+  #define Q_FT_GLYPHSLOT_EMBOLDEN(slot) 
+  #endif
+
+*** javascript fix
+
+  the provided javascript tests the GCC version for advanced configuration; however, the test is 
+  miss-evaluated for LSB compilers; thus, we manually disable the extra features; recall
+  that we do not need javascript for DESTool, we just want to succeed in compiling. This job would
+  be much easier if we could disable javascript alltogether.
+
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/Atomics.h" line 73ff
+
+  /* lsb/tm: mist use bits/atomicity for LSB-complience */
+  #if ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 2))) && (! defined (__LSB_VERSION__) )
+  #include <ext/atomicity.h>
+  #else
+  #include <bits/atomicity.h>
+  #endif
+
+  LSB 4.0 apparently does not provide timegm(); we therefor disable this feature
+
+  file "src/3rdparty/javascriptcore/JavaScriptCore/wtf/Platform.h" line 730
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/Platform.h" line 778
+
+  /* lsb/tm: override for LSB 4.0 */
+  #if defined (__LSB_VERSION__) && ( __LSB_VERSION__ <= 40 )
+  #undef HAVE_TIMEGM 
+  #endif
+
+  the javascript runtime refers to "pthread_getattr_np" which is available only in lsb 4.1;
+  there is the suggestion to fix this by loading the symbol dynamically; since we do not need
+  javascript anyway, we dont really care about success at this end; 
+
+  file "src/3rdparty/javascriptcore/JavaScriptCore/runtime/Collector.cpp" line 662
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/StackBounds.cpp" line 173
+  file "src/3rdparty/webkit/Source/JavaScriptCore/heap/MachineStackMarker.cpp" line 387
+
+  compact replcament code for "pthread_getattr_np" by dynamic lookup (should have mutex?)
+
+  // lsb/tm Collector.cpp line 109, i.e. within namespace
+  #if defined (__LSB_VERSION__) && ( __LSB_VERSION__ <= 40 )
+  #include<dlfcn.h> 
+  int pthread_getattr_np(pthread_t thread, pthread_attr_t * attr) {
+    typedef int (*PthreadGetattrNp)(pthread_t,pthread_attr_t*);
+    static  PthreadGetattrNp pthread_getattr_np_ptr = NULL; 
+    if(pthread_getattr_np_ptr==NULL)
+      pthread_getattr_np_ptr =
+        reinterpret_cast<PthreadGetattrNp>(dlsym(RTLD_DEFAULT, "pthread_getattr_np"));
+    ASSERT(pthread_getattr_np_ptr!=NULL); 
+    return pthread_getattr_np_ptr(thread,attr);
+  }
+
+
+  presumably harmless features missing here
+
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/OSAllocatorPosix.cpp" line 76
+
+  #if (! defined( __LSB_VERSION__ )) || ( defined (__LSB_VERSION__) && ( __LSB_VERSION__ > 40 ) )  // lsb/tm
+  flags |= MAP_NORESERVE;  
+  #endif
+
+
+*** core library
+
+  thread local storage is no available in LSB 4.0 but is detected by macros/configure;
+  we need to disable this feature
+
+  file "src/corelib/thread/qthread_unix.cpp" line 118
+
+  #if defined(Q_OS_LINUX) && defined(__GLIBC__) && (defined(Q_CC_GNU) || defined(Q_CC_INTEL))
+  #if (! defined( __LSB_VERSION__ )) || ( defined (__LSB_VERSION__) && ( __LSB_VERSION__ > 40 ) )  // lsb/tm
+  #define HAVE_TLS   # lsb/tm
+  #endif
+  #endif
+
+** buildkey
+
+   to allow non-LSB Qt installations to load our plugins viogen etc, we set a generic build key as 
+   configure command option; to make sure that it is accepted, tweak ./configure line 8235
+
+   # lsb/tm: override build key by commandline
+   if [ ! -z "$CFG_USER_BUILD_KEY" ];
+     QT_BUILD_KEY="$CFG_USER_BUILD_KEY"
+     QT_BUILD_KEY_COMPAT="$CFG_USER_BUILD_KEY"
+   fi
+
+
+*** configure command (
+
+./configure -v -release -opensource -fast -prefix /opt/qt-4.8.7-lsb-4.0 -buildkey "x86_64 linux g++-4 full-config" -platform linux-lsb-g++ -no-neon -no-avx -no-qt3support -no-pch -no-largefile -no-accessibility -no-xrandr -no-xvideo -no-xsync -no-xshape -no-sm -no-libmng -no-gif -qt-libpng -no-cups -no-openssl -no-phonon -no-opengl -no-javascript-jit -no-declarative -no-dbus -no-javascript-jit -no-script -no-scripttools -no-multimedia -webkit -nomake demos -nomake translations -nomake examples 
+
+for a first basic test, additional options may include "-no-webkit -nomake tools -nomake docs -no-gui"
+
+*** overall status 
+
+  - qt compiles fine, DESTool fully funtional
+
+
+
+==============================================================================================
+
+something completely else: getting gcc 4.8 for ubuntu 10.04LTS
+
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+
+sudo apt-get update; sudo apt-get install gcc-4.8 g++-4.8
+
+sudo update-alternatives --remove-all gcc 
+sudo update-alternatives --remove-all g++
+
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 20
+sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.8 20
+
+sudo update-alternatives --config gcc
+sudo update-alternatives --config g++
+
+redo the default 4.4 by
+
+sudo update-alternatives --remove-all gcc 
+sudo update-alternatives --remove-all g++
+
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.4 20
+sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-4.4 20
+
+sudo update-alternatives --config gcc
+sudo update-alternatives --config g++
+
+
+==============================================================================================
+
+BUILDING AN LSB CONFORM APPLICATION: VIOGEN
+
+==============================================================================================
+
+
+Set the path to the approriate qmake, inspect and use setpath44lsb.sh
+
+Build libfaudes: use copyfaudes.sh and adapt to use gcc_lsb as FAUDES_PLATFORM
+
+Build libvio, qspilne, viogen: std qmake/make
+
+Strip nonlsb elf sections 
+strip -R .debug_aranges -R .debug_pubnames viogen-lsb-3.2 
+
+
+
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+=============================================================================================
+below this line: copy edited comments distributed with patched Qt 4.8.7 sources
+
+
+
+=============================================================================================
+=============================================================================================
+
+THIS IS NOT AN OFFICIAL QT DISTRIBUTION  --- IT IS NOT MEANT FOR GENERAL USE
+
+=============================================================================================
+=============================================================================================
+
+This archieve is based on the open-source distribution of Qt 4.8.7 provided by The Qt Company 
+under terms of the LGPL license. Since we distribute Qt together with DESTool we are meant to 
+also provide the sources and document how the binaries have been obtained.
+
+We have applied a number of minor tweaks to link against LSB library stubs and to gain
+some cross-distribution binary compatibility for DESTool. However, be warned: the tweaks are 
+**very** pragmatic and it is not expected that this varaint of Qt will be good for anything 
+else then to distribute DESTool.
+
+Allthough we must redistribute the patched sources by the applicable license, and allthough 
+you are permitted to use them by the terms of that license, you really should not do so
+in your very own interest.
+
+
+=============================================================================================
+
+*** Linux/LSB
+
+Versions: LSB 4.0, Qt 4.8.7, GCC 4.7.2, LSB-SDK 4.1.7, all on Debian 7.4, build 2016/02
+
+*** process
+
+   start with plain qt source "qt-everywhere-opensource-4.8.7.tgz"
+   mark all changes with "lsb/tm", try to be careful not to affect other architectures 
+   never ever configure/build the source tree directly --- allways do this in a copy
+
+*** LSB install: use install skript for complete install, move to /usr/opt/lsb
+
+*** set environment to locate lsb compilers 
+
+  export PATH=$PATH:/opt/lsb/bin
+
+*** fix "mkspecs/linux-lsb-g++" to explicitly set lsb version 4.0 
+
+  (alternatively, we could have our own specs"mkspecs/linux-lsb-g++-faudes")
+
+  set explicit target version to lsb 4.0 
+
+  QMAKE_CC = lsbcc --lsb-target-version=4.0    
+  QMAKE_CXX = lsbc++ --lsb-target-version=4.0    
+
+  set fallback dynamic loader for target systems without lsb support
+
+  QMAKE_LINK = lsbc++ --lsb-target-version=4.0  --lsb-besteffort
+  QMAKE_LINK_SHLIB  = lsbc++ --lsb-target-version=4.0  --lsb-besteffort
+
+  for the besteffort option to compile, the linker needs to find besteffor.o provided by lsb;
+  pargmatically
+
+  cp /opt/lsb/lib64-4.0/besteffort.o QTSOURCEPATH/lib/
+
+  explicitly link to dynamic libs to make lsb linker figure relevant stubs
+
+  QMAKE_LIBS = -Wl,-as-needed -lrt -lz -lm -ldl -lX11 -lXrender -lXext -lfontconfig -lfreetype
+ 
+  explicitly direct to 64-bit library stubs in version 4.0 (could also set a link in /opt/lsb)
+
+  QMAKE_LIBDIR = /opt/lsb/lib64-4.0 
+  QMAKE_LIBDIR_X11 = /opt/lsb/lib64-4.0 
+  QMAKE_LIBDIR_OPENGL = /opt/lsb/lib64-4.0
+
+  QMAKE_CFLAGS = -m64
+  QMAKE_LFLAGS = -m64
+
+  follow up in "mkspecs/features_qt_functions.prf"
+  
+  QMAKE_LFLAGS *= -L/opt/lsb/lib64-4.0    
+
+
+*** configure options
+
+  - use "-qt-libpng" to bypass missing "pngcpnf.h" in lsb system png
+  - don't say anything on "sse", let configure figure it (will turn it all on)
+  - configure as open source since we dont have a commercial license for 4.8.7 (will be prompted)
+  - use "-no-cups", "-no-opengl" since we dont need it
+  - use "-no-javascript-jit", "-no-openssl" since they wont compile
+  - command line given below
+
+*** qglobal.h --- may want to fix the QT_LINUXBASE macro (?)
+
+*** freetype fix: 
+
+  LSB 4.0 includes xrender, freetype and fontconfig - fine; however, qt wont compile with 
+  LSB system freetype for missinterpreting its version/capabilities; in fact, to my best
+  knowledge freetype 2.1.10 does *not* provide FT_GlyphSlot_Embolden. I therefore manually
+  disable access to that features
+
+  file "src/gui/text/qfontengine_ft.cpp" line 100ff
+
+  /* FreeType 2.1.10 starts to provide FT_GlyphSlot_Embolden */
+  #if (FREETYPE_MAJOR*10000+FREETYPE_MINOR*100+FREETYPE_PATCH) >= 20110
+  #define Q_FT_GLYPHSLOT_EMBOLDEN(slot)   FT_GlyphSlot_Embolden(slot)
+  #else
+  #define Q_FT_GLYPHSLOT_EMBOLDEN(slot) 
+  #endif
+
+  /* lsb/tm: override for LSB 4.0 */
+  #if defined (__LSB_VERSION__) && ( __LSB_VERSION__ <= 40 )
+  #undef Q_FT_GLYPHSLOT_EMBOLDEN 
+  #define Q_FT_GLYPHSLOT_EMBOLDEN(slot) 
+  #endif
+
+*** javascript fix
+
+  the provided javascript tests the GCC version for advanced configuration; however, the test is 
+  miss-evaluated for LSB compilers; thus, we manually disable the extra features; recall
+  that we do not need javascript for DESTool, we just want to succeed in compiling. This job would
+  be much easier if we could disable javascript alltogether.
+
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/Atomics.h" line 73ff
+
+  /* lsb/tm: mist use bits/atomicity for LSB-complience */
+  #if ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 2))) && (! defined (__LSB_VERSION__) )
+  #include <ext/atomicity.h>
+  #else
+  #include <bits/atomicity.h>
+  #endif
+
+  LSB 4.0 apparently does not provide timegm(); we therefor disable this feature
+
+  file "src/3rdparty/javascriptcore/JavaScriptCore/wtf/Platform.h" line 730
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/Platform.h" line 778
+
+  /* lsb/tm: override for LSB 4.0 */
+  #if defined (__LSB_VERSION__) && ( __LSB_VERSION__ <= 40 )
+  #undef HAVE_TIMEGM 
+  #endif
+
+  the javascript runtime refers to "pthread_getattr_np" which is available only in lsb 4.1;
+  there is the suggestion to fix this by loading the symbol dynamically; since we do not need
+  javascript anyway, we dont really care about success at this end; 
+
+  file "src/3rdparty/javascriptcore/JavaScriptCore/runtime/Collector.cpp" line 662
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/StackBounds.cpp" line 173
+  file "src/3rdparty/webkit/Source/JavaScriptCore/heap/MachineStackMarker.cpp" line 387
+
+  compact replcament code for "pthread_getattr_np" by dynamic lookup (should have mutex?)
+
+  // lsb/tm Collector.cpp line 109, i.e. within namespace
+  #if defined (__LSB_VERSION__) && ( __LSB_VERSION__ <= 40 )
+  #include<dlfcn.h> 
+  int pthread_getattr_np(pthread_t thread, pthread_attr_t * attr) {
+    typedef int (*PthreadGetattrNp)(pthread_t,pthread_attr_t*);
+    static  PthreadGetattrNp pthread_getattr_np_ptr = NULL; 
+    if(pthread_getattr_np_ptr==NULL)
+      pthread_getattr_np_ptr =
+        reinterpret_cast<PthreadGetattrNp>(dlsym(RTLD_DEFAULT, "pthread_getattr_np"));
+    ASSERT(pthread_getattr_np_ptr!=NULL); 
+    return pthread_getattr_np_ptr(thread,attr);
+  }
+
+
+  presumably harmless features missing here
+
+  file "src/3rdparty/webkit/Source/JavaScriptCore/wtf/OSAllocatorPosix.cpp" line 76
+
+  #if (! defined( __LSB_VERSION__ )) || ( defined (__LSB_VERSION__) && ( __LSB_VERSION__ > 40 ) )  // lsb/tm
+  flags |= MAP_NORESERVE;  
+  #endif
+
+
+*** core library
+
+  thread local storage is no available in LSB 4.0 but is detected by macros/configure;
+  we need to disable this feature
+
+  file "src/corelib/thread/qthread_unix.cpp" line 118
+
+  #if defined(Q_OS_LINUX) && defined(__GLIBC__) && (defined(Q_CC_GNU) || defined(Q_CC_INTEL))
+  #if (! defined( __LSB_VERSION__ )) || ( defined (__LSB_VERSION__) && ( __LSB_VERSION__ > 40 ) )  // lsb/tm
+  #define HAVE_TLS   # lsb/tm
+  #endif
+  #endif
+
+** buildkey
+
+   to allow non-LSB Qt installations to load our plugins viogen etc, we set a generic build key as 
+   configure command option; to make sure that it is accepted, tweak ./configure line 8235
+
+   # lsb/tm: override build key by commandline
+   if [ ! -z "$CFG_USER_BUILD_KEY" ];
+     QT_BUILD_KEY="$CFG_USER_BUILD_KEY"
+     QT_BUILD_KEY_COMPAT="$CFG_USER_BUILD_KEY"
+   fi
+
+
+*** configure command (
+
+./configure -v -release -opensource -fast -prefix /opt/qt-4.8.7-lsb-4.0 -buildkey "x86_64 linux g++-4 full-config" -platform linux-lsb-g++ -no-neon -no-avx -no-qt3support -no-pch -no-largefile -no-accessibility -no-xrandr -no-xvideo -no-xsync -no-xshape -no-sm -no-libmng -no-gif -qt-libpng -no-cups -no-openssl -no-phonon -no-opengl -no-javascript-jit -no-declarative -no-dbus -no-javascript-jit -no-script -no-scripttools -no-multimedia -webkit -nomake demos -nomake translations -nomake examples 
+
+for a first basic test, additional options may include "-no-webkit -nomake tools -nomake docs -no-gui"
+
+*** overall status 
+
+  - qt compiles fine, DESTool fully funtional
+
+
+=============================================================================================
+=============================================================================================
+
+In order to comply with the LGPL, we also use this source archieve to build the Qt libraries
+that we distribute with the MS Windows and Mac OsX variants of DESTool. Since the above patches 
+dont affect other platforms than LSB, compilation is straight by the books. 
+
+*** MS Windows
+
+Versions: Windows 7 64bit, compilers from MS Visual C++ 2015 (reporting version 19.00)
+
+C:\> "unpack to destination folder, e.g. C:\Qt-4.8.7"
+C:\> "optionally get "jom"
+C:\> cd \Qt-4.8.7
+C:\Qt-4.8.7> set QTDIR=C:\Qt-4.8.7 
+C:\Qt-4.8.7> set QTMAKESPEC=win32-msvc2015
+C:\Qt-4.8.7> set PATH=%QTDIR%\bin;%PATH%
+C:\Qt-4.8.7> call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86_amd64
+C:\Qt-4.8.7> configure -debug-and-release -opensource -platform win32-msvc2015 -no-3dnow -no-neon -no-qt3support -no-openssl -no-phonon -no-opengl  -no-declarative -no-script -no-scripttools -no-multimedia -webkit -nomake demos -nomake translations -nomake examples 
+> nmake (or "jom -j 20")
+
+notes: make sure that you do not have other compilers (e.g. MinGW)in your PATH; best start with a
+fresh command prompt --- and do all PATH business locally anyway
+
+notes: webkit fails for debug library (I am sure that this can be fixed ...)
+
+notes: allthough Qt-4.8.7 has a ready prepared win32-msvc2015 mkspec, javascript breaks the
+build for minor compatibility issues. Changes in this regard are tagged "cl19/tm", affected files
+are "TypeTraits.h", "StringExtras.h", "WebKit.pri", "ArgList.h", two copies each, locate by 
+"grep -r cl19"

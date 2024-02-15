@@ -1,0 +1,112 @@
+<VioMtcSystem>
+<Generator name="generator" ftype="MtcSystem">
+
+<Alphabet>
+<Event name="alpha">
+<Controllable/>
+<Forcible/>
+</Event>
+</Alphabet>
+
+<StateSet>
+<State id="1">
+<Marked/>
+<Colors ftype="ColorSet">
+<Color name="STOP"/>
+</Colors>
+</State>
+<State id="2">
+<Colors ftype="ColorSet">
+<Color name="STOP"/>
+<Color name="Red"/>
+<Color name="Yellow"/>
+</Colors>
+</State>
+<State id="3">
+<Colors ftype="ColorSet">
+<Color name="HALLO"/>
+</Colors>
+</State>
+</StateSet>
+
+<TransitionRelation>
+<Transition x1="2" event="alpha" x2="3"/>
+</TransitionRelation>
+
+</Generator>
+<VioModels>
+<TransitionList>
+=AAAAAQEAAAACAAAACgBhAGwAcABoAGEAAAAD= </TransitionList>
+<StateList>
+=AAAAAwIAAAABAgAAAAICAAAAAw=== </StateList>
+<EventList>
+=AAAAAQMAAAAKAGEAbABwAGgAYQ=== </EventList>
+<GraphData>
+<States>
+<State>
+1             
+<Item>
+<Position>
+60             -200          
+</Position>
+<BasePoints>
+0              0              30             30             -50            0             
+-29.997741     0             
+</BasePoints>
+</Item>
+</State>
+<State>
+2             
+<Item>
+<Position>
+-30            -290          
+</Position>
+<BasePoints>
+0              0              30             30             -70            0             
+-29.984942     0             
+</BasePoints>
+</Item>
+</State>
+<State>
+3             
+<Item>
+<Position>
+-80            -90           
+</Position>
+<BasePoints>
+0              0              30             30             -50            0             
+-29.998941     0             
+</BasePoints>
+</Item>
+</State>
+</States>
+<TransRel>
+<Trans>
+2              alpha         3              +Spline+     
+<Item>
+<Position>
+-30            -290          
+</Position>
+<BasePoints>
+50             150            0              0              0              29.998170     
+0              150            70             200            -19.971446     200           
+-50            200           
+</BasePoints>
+</Item>
+</Trans>
+</TransRel>
+</GraphData>
+</VioModels>
+<VioLayout>
+0             =AAAA/wAAAAAAAAADAAABBAAAAoQAAADXAQAAAAcBAAAAAQ===  1              161            482            0.658252      
+<ColorMap>
+Red           Red          
+Yellow        Yellow       
+HALLO         Green        
+Magenta       Magenta      
+Grey          Grey         
+Cyan          Cyan         
+STOP          Blue         
+</ColorMap>
+</VioLayout>
+</VioMtcSystem>

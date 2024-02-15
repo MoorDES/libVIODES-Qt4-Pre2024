@@ -1,0 +1,197 @@
+<VioHioPlant>
+<Generator name="FreeInput(FreeInput(FreeInput(FreeInput(Generator))))" ftype="HioPlant">
+
+<Alphabet>
+<Element name="ready">
+<Flags value="0x18"/>
+</Element>
+<Element name="start">
+<Flags value="0x14"/>
+</Element>
+<Element name="go">
+<Flags value="0x28"/>
+</Element>
+<Element name="arrive">
+<Flags value="0x24"/>
+</Element>
+<Element name="stop">
+<Flags value="0x14"/>
+</Element>
+</Alphabet>
+
+<StateSet>
+<State id="1" name="nana">
+<Initial/>
+<Marked/>
+<Flags value="0x19"/>
+</State>
+<State id="2" name="UpError">
+<Marked/>
+<Flags value="0x119"/>
+</State>
+<State id="3">
+<Marked/>
+<Flags value="0xa"/>
+</State>
+<State id="4">
+<Marked/>
+<Flags value="0x19"/>
+</State>
+<State id="5">
+<Marked/>
+<Flags value="0x12"/>
+</State>
+</StateSet>
+
+<TransitionRelation>
+<Transition x1="1" event="ready" x2="3"/>
+<Transition x1="3" event="start" x2="4"/>
+<Transition x1="3" event="stop" x2="2"/>
+<Transition x1="4" event="go" x2="5"/>
+<Transition x1="5" event="arrive" x2="1"/>
+</TransitionRelation>
+
+</Generator>
+<VioModels>
+<TransitionList>
+=AAAABQEAAAABAAAACgByAGUAYQBkAHkAAAADAQAAAAMAAAAKAHMAdABhAHIAdAAAAAQBAAAAAwAAAAgAcwB0AG8AcAAAAAIBAAAABAAAAAQAZwBvAAAABQEAAAAFAAAADABhAHIAcgBpAHYAZQAAAAE== </TransitionList>
+<StateList>
+=AAAABQIAAAABAgAAAAICAAAAAwIAAAAEAgAAAAU== </StateList>
+<EventList>
+=AAAABQMAAAAKAHIAZQBhAGQAeQMAAAAKAHMAdABhAHIAdAMAAAAEAGcAbwMAAAAMAGEAcgByAGkAdgBlAwAAAAgAcwB0AG8AcA=== </EventList>
+<GraphData>
+<States>
+<State>
+1             
+<Item>
+<Position>
+-30            -60           
+</Position>
+<BasePoints>
+0              0              50             30             -70            0             
+-50.040464     0             
+</BasePoints>
+</Item>
+</State>
+<State>
+2             
+<Item>
+<Position>
+120            210           
+</Position>
+<BasePoints>
+0              0              30             30             -50            0             
+-30.022061     0             
+</BasePoints>
+</Item>
+</State>
+<State>
+3             
+<Item>
+<Position>
+80             80            
+</Position>
+<BasePoints>
+0              0              30             20             -50            0             
+-10.009156     0             
+</BasePoints>
+</Item>
+</State>
+<State>
+4             
+<Item>
+<Position>
+160            -80           
+</Position>
+<BasePoints>
+0              0              30             30             -50            0             
+-30.035374     0             
+</BasePoints>
+</Item>
+</State>
+<State>
+5             
+<Item>
+<Position>
+90             -300          
+</Position>
+<BasePoints>
+0              0              30             30             -50            0             
+-9.992414      0             
+</BasePoints>
+</Item>
+</State>
+</States>
+<TransRel>
+<Trans>
+1              ready         3              +Line+       
+<Item>
+<Position>
+-30            -60           
+</Position>
+<BasePoints>
+47.136817      76.178216      0              0              21.322389      27.137585     
+48.051953      61.157031      74.780664      95.175391      103.831471     132.149144    
+110            140           
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+3              start         4              +Line+       
+<Item>
+<Position>
+80             80            
+</Position>
+<BasePoints>
+48.944272      -75.527864     0              0              4.476360       -8.952719     
+25.721094      -51.442188     45.856250      -91.712500     66.575690      -133.151379   
+80             -160          
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+3              stop          2              +Line+       
+<Item>
+<Position>
+80             80            
+</Position>
+<BasePoints>
+10.442210      67.940858      0              0              2.943738       9.567147      
+12.624609      41.029980      21.557813      70.062891      30.769919      100.002236    
+40             130           
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+4              go            5              +Line+       
+<Item>
+<Position>
+160            -80           
+</Position>
+<BasePoints>
+-25.470742     -113.032037    0              0              -9.090302      -28.569521    
+-27.962402     -87.881836     -46.798828     -147.082031    -66.968910     -210.473716   
+-70            -220          
+</BasePoints>
+</Item>
+</Trans>
+<Trans>
+5              arrive        1              +Spline+     
+<Item>
+<Position>
+90             -300          
+</Position>
+<BasePoints>
+-68.944272     115.527864     0              0              -4.468960      8.937920      
+-38.592188     77.184375      -170           140            -134.362097    211.275806    
+-120           240           
+</BasePoints>
+</Item>
+</Trans>
+</TransRel>
+</GraphData>
+</VioModels>
+<VioLayout>
+0             =AAAA/wAAAAAAAAADAAAAyAAAAlgAAAAAAQAAAAcBAAAAAQ===  1              295            883            1              1             
+</VioLayout>
+</VioHioPlant>

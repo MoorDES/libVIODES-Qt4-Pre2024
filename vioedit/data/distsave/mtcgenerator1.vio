@@ -1,0 +1,85 @@
+<VioMtcGenerator>
+<Generator>
+"Generator"   
+
+% 
+%  Statistics for Generator
+%  States:        1
+%  Init/Marked:   0/0
+%  Events:        1
+%  Transitions:   1
+%  StateSymbols:  0
+%  Attrib. E/S/T: 0/1/0
+% 
+
+<Alphabet>
+"alpha"       
+</Alphabet>
+
+<States>
+1             
+<Colors>
+"finish"      
+</Colors>
+</States>
+
+<TransRel>
+1             "alpha"       1             
+</TransRel>
+
+<InitStates>
+</InitStates>
+
+<MarkedStates>
+</MarkedStates>
+
+
+</Generator>
+<VioModels>
+<TransitionList>
+=AAAAAgEAAAABAAAACgBhAGwAcABoAGEAAAABAQAAAAAAAAAAAAAAAA=== </TransitionList>
+<StateList>
+=AAAAAQIAAAAB= </StateList>
+<EventList>
+=AAAAAQMAAAAKAGEAbABwAGgAYQ=== </EventList>
+<GraphData>
+<States>
+<State>
+1             
+<Item>
+<Position>
+0             -10           
+</Position>
+<BasePoints>
+0             0             30            30            -50           0             
+-30.029125    0             
+</BasePoints>
+</Item>
+</State>
+</States>
+<TransRel>
+<Trans>
+1             "alpha"       1             +Spline+      
+<Item>
+<Position>
+0             -10           
+</Position>
+<BasePoints>
+0             -80.595703    0             0             13.419384     -26.838769    
+40.297852     -80.595703    -40.297852    -80.595703    -13.419384    -26.838769    
+0             0             
+</BasePoints>
+</Item>
+</Trans>
+</TransRel>
+</GraphData>
+</VioModels>
+<VioLayout>
+0             == 0             150           1             
+<ColorMap>
+"Green"       "Green"       
+"Red"         "Red"         
+"finish"      "Blue"        
+</ColorMap>
+</VioLayout>
+</VioMtcGenerator>

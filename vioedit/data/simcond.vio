@@ -1,0 +1,39 @@
+<VioSimConditions> 
+<NameSet> 
+condA         
+<EventCondition> 
++Enabled+     +Break+       
+<StartEvents> 
+alpha         beta          gamma         mue           nue           
+</StartEvents> 
+<StopEvents> 
+test          down          broken        
+</StopEvents> 
+</EventCondition> 
+condB         
+<EventCondition> 
++Enabled+     
+<StartEvents> 
+alpha         
+</StartEvents> 
+<StopEvents> 
+gamma         
+</StopEvents> 
+</EventCondition> 
+CondC         
+<EventCondition> 
++Enabled+     
+<StartEvents> 
+alpha         
+</StartEvents> 
+<StopEvents> 
+gamma         
+</StopEvents> 
+</EventCondition> 
+</NameSet> 
+<VioData> 
+=AAAAAwAAAAoAYwBvAG4AZABBAAAACgBjAG8AbgBkAEIAAAAKAEMAbwBuAGQAQw=== </VioData> 
+<VioLayout> 
+1              472            630            
+</VioLayout> 
+</VioSimConditions> 

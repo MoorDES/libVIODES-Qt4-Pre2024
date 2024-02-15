@@ -1,7 +1,7 @@
 ============================================================================================
 ============================================================================================
 
-License for vioGen and desTool software.
+License for vioDes and desTool software.
 
 ============================================================================================
 ============================================================================================
@@ -43,7 +43,7 @@ Copyright is with Thomas Moor, Klaus Schmidt and Sebastian Perk.
 
 The GUI in its experimental state is distributed in binary form only. You are allowd
 to freely use the GUI without any restrictions. However, you are not allowed to modify or 
-re-distribute this software. Copyright is with Thomas Moor.
+re-distribute this software Copyright is with Thomas Moor.
 
 
 ============================================================================================
@@ -56,13 +56,13 @@ re-distribute this software. Copyright is with Thomas Moor.
 
 The GUI in its experimental state is distributed in binary form only. You are allowd
 to freely use the GUI without any restrictions. However, you are not allowed to modify or 
-re-distribute this software. Copyright is with Thomas Moor.
+re-distribute this software Copyright is with Thomas Moor.
 
 
 ============================================================================================
 ============================================================================================
 
-4a) external libraries: ALGLIB
+4) external libraries.
 
 ============================================================================================
 ============================================================================================
@@ -97,18 +97,6 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF TH
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-============================================================================================
-============================================================================================
-
-4b) external libraries: w32-pthreads
-
-============================================================================================
-============================================================================================
-
-The windows version of this software is dynamically linked to pthreads-w32, which is distributed 
-under terms of the LGPL. The source code, including a copy of the LGPL, is available at 
-http://sourceware.org/pthreads-win32. 
-
 
 ============================================================================================
 ============================================================================================
@@ -121,7 +109,7 @@ http://sourceware.org/pthreads-win32.
 The GUI has been developed with Trolltech's Qt framework under the Trolltech Qt academic 
 license. From correspondance with Trolltech, this the limits use of the software to educational, 
 non-commercial research and/or administrative purposes. Trolltech's Qt in turn uses external
-libraries thet come under specific licenses, all quite permisssiv. In what follows, we list
+libraries thet come under specific licenses, all quit permisssiv. In what follows, we list
 the respective licenses.
 
 

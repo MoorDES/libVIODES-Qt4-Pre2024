@@ -1,0 +1,1218 @@
+/* viosymbol.cpp  - symbol line editors and friends  */
+
+/*
+   Graphical  IO for FAU Discrete Event Systems Library (libfaudes)
+
+   Copyright (C) 2008  Thomas Moor, Klaus Schmidt, Sebastian Perk
+
+*/
+
+
+#include "viosymbol.h"
+
+
+
+/* 
+ ******************************************
+ ******************************************
+ ******************************************
+
+ implementation of symbol validator
+
+ ******************************************
+ ******************************************
+ ******************************************
+ */
+
+// construct
+VioSymbolValidator::VioSymbolValidator(QObject* parent) :  
+  QValidator(parent), mSymbolMode(VioSymbol::DefaultMode), pCompleter(0) {
+};
+
+// destruct
+VioSymbolValidator::~VioSymbolValidator(void) {  
+  FD_DQ("VioSymbolValidator::~VioSymbolValidator("<<this<<")");
+};
+
+// enable fake / known / etc
+void VioSymbolValidator::setSymbolMode(VioSymbol::Mode mode) {
+  mSymbolMode=mode;
+}
+
+// set completer to validate known symbols
+void VioSymbolValidator::setCompleter(QCompleter* completer) {
+  pCompleter=completer;
+}
+
+// validate
+VioSymbolValidator::State VioSymbolValidator::validate(QString& input, int & pos) const {
+  (void) pos;
+  // have copy
+  QString cand=input;
+  // validate any string
+  if(mSymbolMode & VioSymbol::AnyString) {
+    if(cand.length()>0) return Acceptable;
+    return Intermediate;
+  }
+  // validate fake symbol
+  if(cand.indexOf("#")==0 && (mSymbolMode & VioSymbol::FakeSymbols)) {
+    cand.remove(0,1);
+    cand=cand.trimmed();
+    if(cand=="") return Intermediate;
+    bool ok=true;
+    cand.toULong(&ok,10);
+    if(ok) return Acceptable;
+    return Invalid;
+  }
+  // validate faudes symbol 
+  if(!(mSymbolMode & VioSymbol::KnownSymbolsOnly)) {
+    if(input=="") return Intermediate;
+    if(faudes::SymbolTable::ValidSymbol(VioStyle::StrFromQStr(input))) return Acceptable;
+    return Invalid;
+  }
+  // validate known faudes symbol 
+  if(input=="") return Intermediate;
+  if(!faudes::SymbolTable::ValidSymbol(VioStyle::StrFromQStr(input))) return Invalid;
+  if(pCompleter) 
+    if(QStringListModel* strlist=qobject_cast<QStringListModel*>(pCompleter->model())) {
+      if(strlist->stringList().contains(input)) 
+        return Acceptable;
+    }
+  // todo: use completer to figure intermediate
+  return Intermediate;
+};
+
+
+/* 
+ ******************************************
+ ******************************************
+ ******************************************
+
+ implementation of symbol line edit
+
+ ******************************************
+ ******************************************
+ ******************************************
+ */
+
+
+// construct
+VioSymbolEdit::VioSymbolEdit(QWidget *parent) : 
+  QStackedWidget(parent), pSymbolTable(0), mSymbolMode(VioSymbol::DefaultMode), pCompleter(0)  
+{
+  FD_DQ("VioSymbolEdit::VioSymbolEdit("<<this<<")");
+  // stacked widget with line edit default
+  mLineEdit=new QLineEdit(this);
+  mComboBox=new QComboBox(this);
+  mComboBox->setEditable(true);
+  addWidget(mComboBox);
+  addWidget(mLineEdit);
+  // have my own validator
+  mValidator= new VioSymbolValidator(this);
+  // further initialisation by set up mode
+  setSymbolMode(VioSymbol::DefaultMode);  
+  // record my palette
+  mPalette= mLineEdit->palette();
+  // connect signals to uniform extern interface
+  connect(mLineEdit,SIGNAL(textEdited(const QString&)),this,SIGNAL(textChanged(const QString)));
+  connect(mLineEdit,SIGNAL(returnPressed(void)),this,SIGNAL(returnPressed(void)));
+  connect(mComboBox,SIGNAL(editTextChanged(const QString&)),this,SIGNAL(textChanged(const QString)));
+  connect(mComboBox,SIGNAL(activated(const QString&)),this,SIGNAL(textChanged(const QString)));
+  connect(mComboBox,SIGNAL(activated(const QString&)),this,SIGNAL(returnPressed()));
+  connect(mComboBox->lineEdit(),SIGNAL(returnPressed()),this,SIGNAL(returnPressed()));
+  // connect for internal validation
+  connect(mLineEdit,SIGNAL(textEdited(const QString&)),this,SLOT(validate()));
+  connect(mComboBox->lineEdit(),SIGNAL(textEdited(const QString&)),this,SLOT(validate()));
+  FD_DQ("VioSymbolEdit::VioSymbolEdit(): done");
+};
+
+
+// destruct
+VioSymbolEdit::~VioSymbolEdit(void) {  
+  FD_DQ("VioSymbolEdit::~VioSymbolEdit("<<this<<")");
+};
+
+// set/initialise symbolmode
+void VioSymbolEdit::setSymbolMode(VioSymbol::Mode mode) {
+  FD_DQ("VioSymbolEdit::setSymbolMode(" << mode << ")");
+  // record mode
+  mSymbolMode=mode;
+  // pass on to my validator and completer
+  mValidator->setSymbolMode(mode);
+  /*
+  if(VioSymbolCompleter* vscompleter=qobject_cast<VioSymbolCompleter*>(pCompleter)) {
+    vscompleter->setSymbolMode(mode);
+  }
+  */
+  // remove completer if no such
+  if(!pCompleter) {  
+    mLineEdit->setCompleter(0);
+    mComboBox->lineEdit()->setCompleter(0);
+  }
+  // let validator know valid symbols
+  if(mSymbolMode & VioSymbol::KnownSymbolsOnly) {
+    mValidator->setCompleter(pCompleter);
+  }
+  // remove previous event filters from my editor widgets
+  mLineEdit->removeEventFilter(this);
+  mComboBox->removeEventFilter(this);
+  mComboBox->view()->removeEventFilter(this);
+  mComboBox->lineEdit()->removeEventFilter(this);
+  // initialise edit widget and put to front
+  if(!(mSymbolMode & VioSymbol::ComboBox)) {
+    mLineEdit->setCompleter(pCompleter);
+    mLineEdit->setValidator(mValidator);
+    mLineEdit->setReadOnly(mSymbolMode & VioSymbol::ReadOnly);
+    mLineEdit->installEventFilter(this);
+    setCurrentWidget(mLineEdit);  
+  }
+  if(mSymbolMode & VioSymbol::ComboBox) {
+    mComboBox->lineEdit()->setCompleter(pCompleter);
+    mComboBox->lineEdit()->setValidator(mValidator);
+    mComboBox->lineEdit()->setReadOnly(mSymbolMode & VioSymbol::ReadOnly);
+    mComboBox->setEnabled(!(mSymbolMode & VioSymbol::ReadOnly));
+    mComboBox->setDuplicatesEnabled(false);
+    mComboBox->view()->setMinimumHeight(20);
+    mComboBox->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    mComboBox->installEventFilter(this);
+    setCurrentWidget(mComboBox);
+  }
+  // focus proxy
+  setFocusProxy(currentWidget());
+  FD_DQ("VioSymbolEdit::setSymbolMode(): done");
+}
+
+
+// set completer
+void VioSymbolEdit::setCompleter(QCompleter* completer) {
+  pCompleter=completer;
+  setSymbolMode(mSymbolMode);
+}
+
+
+// set symbol table
+void VioSymbolEdit::setSymbolTable(faudes::SymbolTable* symtab) {
+  pSymbolTable=symtab;
+  setSymbolMode(mSymbolMode);
+}
+
+// set text
+void VioSymbolEdit::setText(QString symbol) {
+  FD_DQ("VioSymbolEdit::setText(" << VioStyle::StrFromQStr(symbol) << ")");
+  if(!(mSymbolMode & VioSymbol::ComboBox)) 
+    mLineEdit->setText(symbol);
+  else {
+    int pos=mComboBox->findText(symbol);
+    if(pos<0) mComboBox->addItem(symbol);
+    pos=mComboBox->findText(symbol);
+    if(pos>=0) mComboBox->setCurrentIndex(pos);
+  }
+  //validate();
+  FD_DQ("VioSymbolEdit::setText(): done");
+}
+  
+// set text
+void VioSymbolEdit::setSymbol(QString symbol) {
+  if(!VioStyle::ValidFakeSymbol(symbol)) symbol="";
+  if(!(mSymbolMode & VioSymbol::FakeSymbols))
+  if(!VioStyle::ValidSymbol(symbol)) symbol="";
+  setText(symbol);
+}
+
+// set text
+void VioSymbolEdit::setSymbol(const std::string& symbol) {
+  setSymbol(VioStyle::QStrFromStr(symbol));
+}
+
+// set text
+void VioSymbolEdit::setIndex(faudes::Idx idx) {
+  setText(VioStyle::SymbolFromIdx(idx,pSymbolTable));
+}
+
+// get text
+QString VioSymbolEdit::text(void) {
+  QString res;
+  if(!(mSymbolMode & VioSymbol::ComboBox)) 
+    res=mLineEdit->text();
+  else 
+    res=mComboBox->currentText();
+  FD_DQ("VioSymbolEdit::text("<< this << "):" << VioStyle::StrFromQStr(res));
+  return res;
+}
+
+// get text
+QString VioSymbolEdit::symbol(void) {
+  return text();
+}
+
+// get index
+faudes::Idx VioSymbolEdit::index(void) {
+  return VioStyle::IdxFromSymbol(symbol(),pSymbolTable);  
+}
+
+// set/get model index (for reference only)
+void VioSymbolEdit::setModelIndex(const QModelIndex& index) {
+  mModelIndex=index;
+}
+QModelIndex VioSymbolEdit::modelIndex(void) {
+  return mModelIndex;
+}
+
+// selcet all
+void VioSymbolEdit::selectAll(void) {
+  mLineEdit->selectAll();
+  mComboBox->lineEdit()->selectAll();
+}
+
+// since i have a focus proxy, i never get a key
+void VioSymbolEdit::keyPressEvent (QKeyEvent* event){
+  FD_DQ("VioSymbolEdit::keyPressEvent(" << this << " ): "  << event->key());
+  QStackedWidget::keyPressEvent(event);
+}
+
+// since i have a focus proxy, i never get focus
+void VioSymbolEdit::focusInEvent(QFocusEvent *event) {
+  FD_DQ("VioSymbolEdit::focusInEvent(" << this << " ): updating");
+  if(VioSymbolCompleter* vscompleter= qobject_cast<VioSymbolCompleter*>(pCompleter)) 
+    vscompleter->Update();
+  QStackedWidget::focusInEvent(event);
+}; 
+
+
+// provide event filter for my editor widgets (lineedit and combobox) to sense focus in
+bool VioSymbolEdit::eventFilter(QObject *obj, QEvent *event) {
+  // other objects use whatever this stacked widget wants to filter
+  if((obj != mLineEdit) && (obj != mComboBox) && (obj != mComboBox->view()) && (obj != mComboBox->lineEdit()) ) 
+    return QStackedWidget::eventFilter(obj, event);
+  // if it is a navigation key: filter out, pass on to delegate for navigation
+  if(event->type() == QEvent::KeyPress) {
+    QKeyEvent *keyevent = static_cast<QKeyEvent*>(event);
+    if((keyevent->key() == Qt::Key_Space) && !(mSymbolMode & VioSymbol::AnyString)) {
+      FD_DQ("VioSymbolEdit::eventFilter(): pass on navigation");
+      event->ignore();
+      return true;
+    }
+    if((keyevent->key() == Qt::Key_Left) && (obj == mLineEdit)) {
+      if(mLineEdit->cursorPosition()<=0) {
+        FD_DQ("VioSymbolEdit::eventFilter(): pass on navigation");
+        event->ignore();
+        return true;
+      }
+    }
+    if((keyevent->key() == Qt::Key_Right) && (obj == mLineEdit)) {
+      if(mLineEdit->cursorPosition()>=mLineEdit->text().length()) {
+        FD_DQ("VioSymbolEdit::eventFilter(): pass on navigation");
+        event->ignore();
+        return true;
+      }
+    }
+  }
+  // if it is a focus in, update their completers, pass on to editor widget
+  if(event->type() == QEvent::FocusIn) {
+    QFocusEvent *focusevent = static_cast<QFocusEvent*>(event);
+    if(focusevent->gotFocus()) {
+      if(VioSymbolCompleter* vscompleter= qobject_cast<VioSymbolCompleter*>(pCompleter)) {
+        FD_DQ("VioSymbolEdit::eventFilter(): got focus: update completer");
+        vscompleter->Update();
+        if(obj == mComboBox) {
+          // note: this is ineffivcient ... should have fake model on combo model
+          FD_DQ("VioSymbolEdit::eventFilter(): got focus: update combobox: " <<
+	    " keep " << VioStyle::StrFromQStr(mComboBox->currentText()) << 
+            " expecting #" << vscompleter->symbolWorld()->stringList().size());
+	  foreach(QString entry, vscompleter->symbolWorld()->stringList()) 
+            if(mComboBox->findText(entry)<0) mComboBox->addItem(entry);
+        } 
+      }    
+    };    
+    event->ignore();
+  }
+  // run original filter
+  return QStackedWidget::eventFilter(obj,event);
+}
+
+
+// be neet
+bool VioSymbolEdit::validate(void) {
+  // are we valid?
+  QString line=text();
+  int pos;
+  bool valid=  (mValidator->validate(line,pos)==QValidator::Acceptable);
+  // are we known to the completer?
+  bool known=false;
+  if(pCompleter) {
+    if(QStringListModel* strlist=qobject_cast<QStringListModel*>(pCompleter->model())) {
+      if(strlist->stringList().contains(text())) known=true;
+    }
+  }
+  // report
+  FD_DQ("VioSymbolEdit::validate(); " << VioStyle::StrFromQStr(text()) << " valid " << valid << " known " << known );
+  // set colors
+  QPalette pal=mPalette;
+  if(!valid) pal.setColor(QPalette::Text, VioStyle::Color(VioRed));  
+  if(!known && (mSymbolMode & VioSymbol::KnownSymbolsOnly)) pal.setColor(QPalette::Text, VioStyle::Color(VioGreen));  
+  mLineEdit->setPalette(pal);
+  mComboBox->setPalette(pal);
+  return valid;
+}
+
+
+/* 
+ ******************************************
+ ******************************************
+ ******************************************
+
+ implementation of symbol completer
+
+ ******************************************
+ ******************************************
+ ******************************************
+ */
+
+// construct
+VioSymbolCompleter::VioSymbolCompleter(QObject *parent) : QCompleter(parent) {
+  mSymbolWorld= new QStringListModel(0);
+  setModel(mSymbolWorld);
+  pSymbolSource=0;
+};
+
+// destruct
+VioSymbolCompleter::~VioSymbolCompleter(void) {
+  FD_DQ("VioSymbolCompleter:::~VioSymbolCompleter()");
+  setModel(0);
+  delete mSymbolWorld;
+  FD_DQ("VioSymbolCompleter:::~VioSymbolCompleter(): done");
+}
+
+// source: list of strings
+void VioSymbolCompleter::setSymbolWorld(const QStringList& rStringList) {
+  FD_DQ("VioSymbolCompleter::setSymbolWorld("<<this << "): from stringlist");
+  clrSymbolWorld();
+  mSymbolWorld->setStringList(rStringList);
+  setModel(mSymbolWorld);
+  FD_DQ("VioSymbolCompleter::setSymbolWorld("<<this << "): from stringlist: done #" << rStringList.size());
+};
+
+// source: event set
+void VioSymbolCompleter::setSymbolWorld(const faudes::EventSet& rEventSet) {
+  FD_DQ("VioSymbolCompleter::setSymbolWorld("<<this << "): from eventset");
+  QStringList strings;
+  VioStyle::EventsQStrList(strings,&rEventSet);
+  setSymbolWorld(strings);
+};
+
+
+// source: other model
+void VioSymbolCompleter::setSymbolWorld(QAbstractItemModel* pStringModel, int col) {
+  clrSymbolWorld();
+  pSymbolSource=pStringModel;
+  mSymbolSourceColumn=col;
+  Update();
+};
+
+// update from source
+void VioSymbolCompleter::Update(void) {
+  if(!pSymbolSource) return;
+  FD_DQ("VioSymbolCompleter::Update("<<this << "): from model with #" << pSymbolSource->rowCount()
+	<< " at column " << mSymbolSourceColumn);
+  // careful resize/update since my model can be usd somewhere else to
+  if(mSymbolWorld->rowCount() > pSymbolSource->rowCount())
+    mSymbolWorld->removeRows(pSymbolSource->rowCount(),
+      mSymbolWorld->rowCount()-pSymbolSource->rowCount());
+  if(mSymbolWorld->rowCount() < pSymbolSource->rowCount())
+    mSymbolWorld->insertRows(mSymbolWorld->rowCount(),
+      pSymbolSource->rowCount()-mSymbolWorld->rowCount());
+  QModelIndex source, dest;
+  int count=0;
+  for(int row=0; row < pSymbolSource->rowCount(); row++) {
+    source=pSymbolSource->index(row,mSymbolSourceColumn);
+    if(!source.isValid()) continue;
+    QVariant symbol= pSymbolSource->data(source);
+    if(!VioStyle::ValidSymbol(symbol.toString())) continue;
+    dest = mSymbolWorld->index(count);
+    if(!dest.isValid()) continue;
+    mSymbolWorld->setData(dest,symbol);
+    count++;
+    FD_DQ("VioSymbolCompleter::Update("<<this << "): symbol " << 
+	  VioStyle::StrFromQStr(symbol.toString()));
+  } 
+  // todo: we should (optionaly) run sort on it ...  
+  mSymbolWorld->removeRows(count,mSymbolWorld->rowCount()-count);
+  setModel(mSymbolWorld);
+  FD_DQ("VioSymbolCompleter::Update("<<this << "): results in #" << mSymbolWorld->rowCount());
+}
+
+// release mem
+void VioSymbolCompleter::clrSymbolWorld(void) {
+  setModel(0);
+  mSymbolWorld->removeRows(0,mSymbolWorld->rowCount());
+  pSymbolSource=0;
+};
+
+
+
+
+/* 
+ ******************************************
+ ******************************************
+ ******************************************
+
+ implementation of symbol delegate
+
+ ******************************************
+ ******************************************
+ ******************************************
+ */
+
+
+
+// construct
+VioSymbolDelegate::VioSymbolDelegate(QObject *parent) 
+  : QItemDelegate(parent) , pCompleter(0), mSymbolMode(VioSymbol::DefaultMode)
+{
+  FD_DQ("VioSymbolDelegate::VioSymbolDelegate("<<this << ")");
+}
+
+// set symbolmode
+void VioSymbolDelegate::setSymbolMode(VioSymbol::Mode mode) {
+  mSymbolMode=mode;
+}
+
+
+// tell
+QString VioSymbolDelegate::symbol(QWidget *editor) {
+  VioSymbolEdit* symedit = static_cast<VioSymbolEdit*>(editor);
+  return symedit->symbol();
+}
+
+// tell
+faudes::Idx VioSymbolDelegate::index(QWidget *editor) {
+  VioSymbolEdit* symedit = static_cast<VioSymbolEdit*>(editor);
+  return symedit->index();
+}
+
+// tell
+QModelIndex VioSymbolDelegate::modelIndex(QWidget *editor) {
+  VioSymbolEdit* symedit = static_cast<VioSymbolEdit*>(editor);
+  return symedit->modelIndex();
+}
+
+// set completor
+void VioSymbolDelegate::setCompleter(QCompleter* completer) {
+  FD_DQ("VioSymbolDelegate::setCompleter("<<this << "): " << completer);
+  pCompleter=completer;
+}
+
+// create editor widget
+QWidget *VioSymbolDelegate::createEditor(QWidget *parent,
+  const QStyleOptionViewItem& option,
+  const QModelIndex& index) const
+{
+  (void) option; (void) index;
+  FD_DQ("VioSymbolDelegate::createEditor("<<this << ")");
+  VioSymbolEdit*  editor = new VioSymbolEdit(parent);
+  QString symbol = index.model()->data(index, Qt::DisplayRole).toString();
+  editor->setSymbolMode(mSymbolMode);
+  editor->setCompleter(pCompleter);
+  editor->setModelIndex(index);
+#ifdef FAUDES_DEBUG_VIO
+  if(pCompleter)  
+    FD_DQ("VioSymbolDelegate::createEditor("<<this << "): " << editor << " with completer " << pCompleter 
+	<< " #" << pCompleter->model()->rowCount());
+#endif
+  return editor;
+}
+
+// set line edit with data
+void VioSymbolDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const {
+  QString symbol = index.model()->data(index, Qt::DisplayRole).toString();
+  VioSymbolEdit* symedit = static_cast<VioSymbolEdit*>(editor);
+  symedit->setSymbol(symbol);
+  symedit->selectAll();
+}
+
+// set model from line edit
+void VioSymbolDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
+  const QModelIndex &index) const
+{
+  VioSymbolEdit* symedit = static_cast<VioSymbolEdit*>(editor);
+  QString symbol= symedit->symbol();
+  model->setData(index, symbol);
+}
+
+// fix my geometry
+void VioSymbolDelegate::updateEditorGeometry(QWidget *editor,
+  const QStyleOptionViewItem &option, const QModelIndex& index ) const
+{
+  (void) option; (void) index;
+  editor->setGeometry(option.rect);
+}
+
+
+// find my navigation keys and pass to view
+// note: his filter gest automatically installed on the editor widget
+// note: the editor widget here is the the stack, not the combobox or lineedit
+bool VioSymbolDelegate::eventFilter(QObject *obj, QEvent *event) {
+
+  // inactive
+  //return QItemDelegate::eventFilter(obj, event);
+
+  // track parent (should be a view)
+  /*
+  if(obj==parent())  {
+    // close on focus loss
+    if(event->type() == QEvent::FocusOut)  {
+      FD_DQ("VioSymbolDelegate::eventFilter(...): parent focus");
+      foreach(QObject* child,parent()->children()) {
+        if(VioSymbolEdit* editor=qobject_cast<VioSymbolEdit*>(child)) {
+          FD_DQ("VioSymbolDelegate::eventFilter(...): parent focus: close editor");
+          emit commitData(editor);
+          emit closeEditor(editor, QAbstractItemDelegate::NoHint);
+        }
+      }
+    }
+    // be careful not to filter anything out
+    return false;
+  }
+  */
+
+  // filter only keys ...
+  if(!(event->type() == QEvent::KeyPress)) 
+    return QItemDelegate::eventFilter(obj, event);
+  // filter only in my editor
+  VioSymbolEdit* editor= qobject_cast<VioSymbolEdit*>(obj);
+  if(!editor) 
+     return QItemDelegate::eventFilter(obj, event);
+  // report
+  QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+  FD_DQ("VioSymbolDelegate::eventFilter(...): key " << keyEvent->key());
+  // plain navigation: commit, filter out, pass on to tableview
+  if(
+     ((keyEvent->key() == Qt::Key_Return) && (keyEvent->modifiers() & Qt::ShiftModifier)) ||
+     (keyEvent->key() == Qt::Key_Up) ||
+     (keyEvent->key() == Qt::Key_Down) ||
+     (keyEvent->key() == Qt::Key_Left) ||
+     (keyEvent->key() == Qt::Key_Right) ) 
+  {
+    FD_DQ("VioSymbolDelegate::eventFilter(...): navigation");
+    emit commitData(editor);
+    emit closeEditor(editor);
+    event->ignore();
+    FD_DQ("VioSymbolDelegate::eventFilter(...): navigation: done");
+    return true;
+  }
+  // return/space: edit next: commit, filter out, dont pass on to tableview
+  if((keyEvent->key() == Qt::Key_Return) || (keyEvent->key() == Qt::Key_Space)) {
+    FD_DQ("VioSymbolDelegate::eventFilter(...): edit next");
+    emit commitData(editor);
+    emit closeEditor(editor, QAbstractItemDelegate::EditNextItem);
+    event->accept();
+    FD_DQ("VioSymbolDelegate::eventFilter(...): edit next: done");
+    return true;
+  }
+  // else: std process
+  return QItemDelegate::eventFilter(obj, event);
+};
+
+
+
+/*
+*******************************************
+*******************************************
+*******************************************
+
+implementation of symbol multi column  widget
+
+*******************************************
+*******************************************
+*******************************************
+*/
+
+// constructor
+VioSymbolMultiColumnWidget::VioSymbolMultiColumnWidget(QWidget* parent) : QTableView(parent) {
+  FD_DQ("VioSymbolMultiColumnWidget::VioSymbolMultiColumnWidget()");
+  // core members
+  setModel(&mModel);
+  // set bahavior
+  setShowGrid(false);         
+  setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  setSelectionBehavior(QAbstractItemView::SelectRows);
+  setTabKeyNavigation(true);
+  verticalHeader()->hide();
+  horizontalHeader()->setStretchLastSection(true);
+  setSortingEnabled(false);
+  FD_DQ("VioSymbolMultiColumnWidget::VioSymbolMultiColumnWidget(): done");
+};
+
+// dimensions
+void VioSymbolMultiColumnWidget::setDimensions(int rows, int cols) {
+  FD_DQ("VioSymbolMultiColumnWidget::setDimensions(" << rows << ", " << cols << ")");
+  // stop sorting
+  setSortingEnabled(false);
+  // extend columns aka reconfigure
+  if(cols!=columnCount()) {
+    // adjust width
+    mModel.setColumnCount(cols);
+    // dispose old completers/delegates
+    while(!mpCompleters.isEmpty()) delete mpCompleters.takeLast();
+    while(!mpDelegates.isEmpty()) delete mpDelegates.takeLast();
+    pCompleters.clear();
+    // have new completers/delegates
+    while(mpCompleters.size()<cols) mpCompleters.push_back(new VioSymbolCompleter(this));
+    while(mpDelegates.size()<cols) mpDelegates.push_back(new VioSymbolDelegate(this));
+    // set my completers to be the defaults
+    for(int j=0; j<cols; j++) {
+      pCompleters.push_back(mpCompleters.at(j));
+      mpDelegates.at(j)->setCompleter(pCompleters.at(j));
+      setItemDelegateForColumn(j,mpDelegates.at(j));
+    }
+  }
+  // clear model
+  if(rows!=rowCount()) {
+    // remove all lines
+    while(mModel.rowCount()>0) mModel.removeRow(0);
+    // set new length
+    mModel.setRowCount(rows);
+    // fill
+    for(int i=0; i< rows; i++) 
+    for(int j=0; j< cols; j++) {
+      QModelIndex index = mModel.index(i,j);
+      mModel.setData(index,QString(""),Qt::EditRole);
+    }
+  }
+  // enable sorting now
+  setSortingEnabled(true);
+}  
+
+// get dimensions
+int VioSymbolMultiColumnWidget::rowCount(void) { return mModel.rowCount(); };
+int VioSymbolMultiColumnWidget::columnCount(void) { return mModel.columnCount(); };
+
+// set behaviour
+void VioSymbolMultiColumnWidget::setSymbolMode(int col, int mode) {
+  if(col <0 || col >= mModel.columnCount()) return;
+  FD_DQ("VioSymbolMultiColumnWidget::setSymbolMode(" << col << ", " << mode << ")");
+  mpDelegates.at(col)->setSymbolMode((VioSymbol::Mode) mode);
+}
+
+// set base set (must set mode later)
+void VioSymbolMultiColumnWidget::setSymbolWorld(int col, QCompleter* completer) {
+  if(col <0 || col >= mModel.columnCount()) return;
+  FD_DQ("VioSymbolMultiColumnWidget::setSymbolWorld(" << col << "): by completer");
+  pCompleters[col]=completer;
+  mpDelegates[col]->setCompleter(completer);
+}
+
+// set base set
+void VioSymbolMultiColumnWidget::setSymbolWorld(int col, const QStringList& rStringList) {
+  if(col <0 || col >= mModel.columnCount()) return;
+  FD_DQ("VioSymbolMultiColumnWidget::setSymbolWorld(): by stringlist");
+  mpCompleters[col]->setSymbolWorld(rStringList);
+}
+
+// set base set
+void VioSymbolMultiColumnWidget::setSymbolWorld(int col, const faudes::NameSet& rNameSet) {
+  if(col <0 || col >= mModel.columnCount()) return;
+  FD_DQ("VioSymbolMultiColumnWidget::setSymbolWorld(): by eventset");
+  mpCompleters[col]->setSymbolWorld(rNameSet);
+}
+
+// set base set
+void VioSymbolMultiColumnWidget::setSymbolWorld(int col, QAbstractItemModel* pStringModel, int srccol) {
+  if(col <0 || col >= mModel.columnCount()) return;
+  FD_DQ("VioSymbolMultiColumnWidget::setSymbolWorld(): by a model");
+  mpCompleters[col]->setSymbolWorld(pStringModel,srccol);
+}
+
+ 
+// set item
+void VioSymbolMultiColumnWidget::setSymbol(int row, int col, const QString& symbol) {
+  if(col <0 || col >= mModel.columnCount()) return;
+  if(row <0 || row >= mModel.rowCount()) return;
+  FD_DQ("VioSymbolMultiColumnWidget::setSymbol("<<row<<","<<col<<","<< VioStyle::StrFromQStr(symbol)<<")");
+  QModelIndex index = mModel.index(row,col);
+  mModel.setData(index,symbol,Qt::EditRole);
+};
+
+// get item
+QString VioSymbolMultiColumnWidget::Symbol(int row, int col) const {
+  if(col <0 || col >= mModel.columnCount()) return "";
+  if(row <0 || row >= mModel.rowCount()) return "";
+  QModelIndex index = mModel.index(row,col);
+  QString symbol = mModel.data(index,Qt::EditRole).toString();
+  return symbol;
+};
+
+
+// set column
+void VioSymbolMultiColumnWidget::setSymbolColumn(int col, const QStringList& rStringList) {
+  if(col <0 || col >= mModel.columnCount()) return;
+  FD_DQ("VioSymbolMultiColumnWidget::setSymbolColumn(" << col << "): by stringlist");
+  // leader col: truncate/extend
+  if(col==0) {
+    setSortingEnabled(false);
+    while(mModel.rowCount()>rStringList.size()) mModel.removeRow(mModel.rowCount()-1);
+    mModel.setRowCount(rStringList.size());
+    setSortingEnabled(true);
+  }
+  // copy items
+  for(int pos=0; pos < rStringList.size(); pos ++) {
+    QModelIndex index = mModel.index(pos,col);
+    mModel.setData(index,rStringList[pos],Qt::EditRole);
+  }
+};
+
+// get strings
+QStringList VioSymbolMultiColumnWidget::symbolColumn(int col) const {
+  QStringList symbollist;
+  if(col <0 || col >= mModel.columnCount()) return symbollist;
+  for(int row=0; row < mModel.rowCount(); row++) {
+    QModelIndex index = mModel.index(row,col);
+    symbollist.push_back(mModel.data(index,Qt::EditRole).toString());
+  }
+  return symbollist;
+};
+
+// get strings as event set
+faudes::EventSet VioSymbolMultiColumnWidget::eventSetColumn(int col) const {
+  faudes::EventSet res;
+  columnToNameSet(col,res);
+  return res;
+};
+
+// copy strings to name set
+void VioSymbolMultiColumnWidget::columnToNameSet(int col, faudes::EventSet& rNameSet) const {
+  rNameSet.Clear();
+  if(col <0 || col >= mModel.columnCount()) return;
+  for(int row=0; row < mModel.rowCount(); row++) {
+    QModelIndex index = mModel.index(row,col);
+    std::string symbol=VioStyle::StrFromQStr(mModel.data(index,Qt::EditRole).toString());
+    if(faudes::SymbolTable::ValidSymbol(symbol)) rNameSet.Insert(symbol);
+  }
+};
+
+// set strings from event set
+void VioSymbolMultiColumnWidget::setEventSetColumn(int col, const faudes::EventSet& rEventSet) {
+  FD_DQ("VioSymbolMultiColumnWidget::setEventSetColumn(): to eventset " << rEventSet.ToString());
+  QStringList strings;
+  VioStyle::EventsQStrList(strings,&rEventSet);
+  setSymbolColumn(col, strings);
+}
+
+
+
+// behaviour: header
+void VioSymbolMultiColumnWidget::setHeader(QStringList headers) {
+  if(headers.size()!= mModel.columnCount()) return;
+  FD_DQ("VioSymbolMultiColumnWidget::setHeader()");
+  mModel.setHorizontalHeaderLabels(headers);
+};
+
+
+// delete selection
+void VioSymbolMultiColumnWidget::userDelSelection(void) {
+  FD_DQ("VioSymbolMultiColumnWidget::userDelSelection()");
+  QModelIndexList selectedindexes=selectionModel()->selectedIndexes();
+  QList<int> selectedrows;
+  foreach(QModelIndex index, selectedindexes) {
+    if(!index.isValid()) continue;
+    if(index.row()<0) continue;
+    if(index.row()>=model()->rowCount()) continue;
+    if(selectedrows.contains(index.row())) continue;
+    selectedrows.append(index.row());
+  }
+  FD_DQ("VioSymbolMultiColumnWidget::userDelSelection(): #" << selectedrows.size());
+  if(selectedrows.size()==0) return;
+  qSort(selectedrows);
+  int off=0;
+  QList<int>::iterator rit=selectedrows.begin();
+  for(;rit!=selectedrows.end();rit++) {
+    model()->removeRow(*rit+off);
+    off--;
+  }
+  emit editingFinished(-1,-1);
+}
+
+// clear selection
+void VioSymbolMultiColumnWidget::userSelectionClear(void) {
+  selectionModel()->clearSelection();
+};
+
+// get key events
+void VioSymbolMultiColumnWidget::keyPressEvent(QKeyEvent *event) {
+  FD_DQ("VioSymbolMultiColumnWidget::keyPressEvent(...): " << event->key());
+  // inactive
+  /*
+  QTableView::keyPressEvent(event);
+  return;
+  */
+
+  // figure where
+  int row = -1;
+  int column = -1;
+  QModelIndex index = currentIndex();
+  if(index.isValid()) row=index.row();
+  column=index.column();
+  // switch: ingnore tab navigation
+  if(event->key() == Qt::Key_Tab) {
+    event->ignore();
+    return;
+  } 
+  // switch: insert mode
+  if( (event->key() == Qt::Key_Insert) || 
+      ( (event->key() == Qt::Key_Return) && (event->modifiers() & Qt::ShiftModifier ) ) ) {
+    FD_DQ("VioSymbolLisWidget::keyPressEvent(...): Insert at row " << row+1);
+    mEditing=true;
+    mInsertMode=true;
+    userSelectionClear();
+    model()->insertRow(row+1);
+    setCurrentIndex(model()->index(row+1,0));
+    QTableView::edit(currentIndex());
+    event->accept();
+    return;
+  } 
+  // switch: edit next row
+  if( (event->key() == Qt::Key_Return) ) {
+    FD_DQ("LioVwidget::keyPressEvent(...): Next Row");
+    if(mEditing || mInsertMode) row=row+1;
+    if(mInsertMode) {
+      if(row>=model()->rowCount()) row=model()->rowCount();
+      model()->insertRow(row);
+    }
+    QModelIndex next=model()->index(row,column);
+    if(next.isValid() && (mModel.flags(next) & Qt::ItemIsEditable) ) {      
+      mEditing=true;
+      userSelectionClear();
+      setCurrentIndex(next);
+      QTableView::edit(currentIndex());
+      event->accept();
+      return;
+    }
+  } 
+  // switch: delete selection
+  if( (event->key() == Qt::Key_Delete)  || (event->key() == Qt::Key_Backspace) ) {
+    FD_DQ("LioVwidget::keyPressEvent(...): Delete");
+    mInsertMode=false;
+    mEditing=false;
+    int current=currentIndex().row();
+    userDelSelection();
+    userSelectionClear();
+    setCurrentIndex(model()->index(current,0));
+    event->accept();
+    return;
+  } 
+  // switch: call base
+  QTableView::keyPressEvent(event);
+  mInsertMode=false;
+  mEditing=false; 
+};  
+
+// edit hook
+bool VioSymbolMultiColumnWidget::edit(const QModelIndex& index, EditTrigger trigger, QEvent* event) {
+  FD_DQ("VioSymbolMultiColumnWidget::edit(" << index.row() << ", " << index.column() << ")");
+  // record for later use
+  mEditIndex=index;
+  return QTableView::edit(index,trigger,event);
+} 
+
+
+
+// edit hook
+void VioSymbolMultiColumnWidget::closeEditor(QWidget* editor, QAbstractItemDelegate::EndEditHint hint) {
+  FD_DQ("VioSymbolMultiColumnWidget::closeEditor(..): hint " << hint);
+  VioSymbolEdit* vioeditor=qobject_cast<VioSymbolEdit*>(editor);
+  //bail out on other editors
+  if(!vioeditor) return;
+  // figure indes
+  QModelIndex index= vioeditor->modelIndex();
+  int row=index.row();
+  int col=index.column();
+  FD_DQ("VioSymbolMultiColumnWidget::closeEditor(..): at(" << row<< ", " << col << ")");
+  // figure data
+  QString symbol = mpDelegates.at(index.column())->symbol(editor);
+  FD_DQ("VioSymbolMultiColumnWidget::closeEditor(..): symbol " << VioStyle::StrFromQStr(symbol) );
+  // remove invalid
+  if(symbol=="" && col==0)  model()->removeRow(index.row()); 
+  // remove doublets
+  for(int row=0; row < model()->rowCount(); row++) {
+    if(row==index.row()) continue;
+    if(model()->data(model()->index(row,0),Qt::EditRole).toString()!= symbol) continue;  
+    FD_DQ("VioSymbolMultiColumnWidget::closeEditor(..): removing symbol " << VioStyle::StrFromQStr(symbol) << " in " << row );
+    model()->removeRow(row);
+  }
+  emit editingFinished(row,col);
+  // pass on (incl open next)
+  QTableView::closeEditor(editor,hint);
+}
+
+// todo
+void VioSymbolMultiColumnWidget::Copy(void) {};
+void VioSymbolMultiColumnWidget::Paste(void) {};
+ 
+
+/*
+*******************************************
+*******************************************
+*******************************************
+
+implementation of symbol list widget
+
+*******************************************
+*******************************************
+*******************************************
+*/
+
+// constructor
+VioSymbolListWidget::VioSymbolListWidget(QWidget* parent) : QTableView(parent) {
+  FD_DQ("VioSymbolListWidget::VioSymbolListWidget()");
+  // core members
+  mCompleter=new VioSymbolCompleter(this);
+  mDelegate=new VioSymbolDelegate(this);
+  pCompleter=mCompleter;
+  FD_DQ("VioSymbolListWidget::VioSymbolListWidget(): b");
+  mDelegate->setCompleter(pCompleter);
+  FD_DQ("VioSymbolListWidget::VioSymbolListWidget(): b2");
+  setItemDelegate(mDelegate);
+  FD_DQ("VioSymbolListWidget::VioSymbolListWidget() c" );
+  setModel(&mModel);
+  // set bahavior
+  FD_DQ("VioSymbolListWidget::VioSymbolListWidget() d" );
+  setShowGrid(false);         
+  setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  setSelectionBehavior(QAbstractItemView::SelectRows);
+  setTabKeyNavigation(true);
+  verticalHeader()->hide();
+  horizontalHeader()->setStretchLastSection(true);
+  setSortingEnabled(false);
+  FD_DQ("VioSymbolListWidget::VioSymbolListWidget(): done");
+};
+
+
+// set behaviour
+void VioSymbolListWidget::setSymbolMode(int mode) {
+  FD_DQ("VioSymbolListWidget::setSymbolMode(" << mode << ")");
+  mDelegate->setSymbolMode((VioSymbol::Mode) mode);
+}
+
+// set base set (must set mode later)
+void VioSymbolListWidget::setSymbolWorld(QCompleter* completer) {
+  FD_DQ("VioSymbolListWidget::setSymbolWorld(): by completer");
+  pCompleter=completer;
+  mDelegate->setCompleter(pCompleter);
+}
+
+// set base set
+void VioSymbolListWidget::setSymbolWorld(const QStringList& rStringList) {
+  FD_DQ("VioSymbolListWidget::setSymbolWorld(): by stringlist");
+  mCompleter->setSymbolWorld(rStringList);
+}
+
+// set base set
+void VioSymbolListWidget::setSymbolWorld(const faudes::EventSet& rEventSet) {
+  FD_DQ("VioSymbolListWidget::setSymbolWorld(): by eventset");
+  mCompleter->setSymbolWorld(rEventSet);
+}
+
+// set base set
+void VioSymbolListWidget::setSymbolWorld(QAbstractItemModel* pStringModel, int col) {
+  FD_DQ("VioSymbolListWidget::setSymbolWorld(): by a model");
+  mCompleter->setSymbolWorld(pStringModel,col);
+}
+
+// set strings (incl initialiation)
+void VioSymbolListWidget::setSymbolList(const QStringList& rStringList) {
+  FD_DQ("VioSymbolListWidget::setSymbolList(): by stringlist");
+  // stop sorting
+  setSortingEnabled(false);
+  // clear model
+  while(mModel.rowCount()>0) mModel.removeRow(0);
+  mModel.setRowCount(rStringList.size());
+  mModel.setColumnCount(1);
+  // fill model
+  for(int pos=0; pos < rStringList.size(); pos ++) {
+    QModelIndex index = mModel.index(pos,0);
+    mModel.setData(index,rStringList[pos],Qt::EditRole);
+  }
+  // enable sorting now
+  setSortingEnabled(true);
+};
+
+// get strings
+QStringList VioSymbolListWidget::symbolList(void) const {
+  QStringList symbollist;
+  for(int row=0; row < mModel.rowCount(); row++) {
+    QModelIndex index = mModel.index(row,0);
+    symbollist.push_back(mModel.data(index,Qt::EditRole).toString());
+  }
+  return symbollist;
+};
+
+// get strings as event set
+faudes::EventSet VioSymbolListWidget::eventSet(void) const {
+  faudes::EventSet res;
+  foreach(QString qsymbol, symbolList()) {
+    std::string symbol = VioStyle::StrFromQStr(qsymbol);
+    if(faudes::SymbolTable::ValidSymbol(symbol)) res.Insert(symbol);
+  }
+  return res;
+};
+
+// copy strings to name set
+void VioSymbolListWidget::toNameSet(faudes::EventSet& rNameSet) const {
+  rNameSet.Clear();
+  foreach(QString qsymbol, symbolList()) {
+    std::string symbol = VioStyle::StrFromQStr(qsymbol);
+    if(faudes::SymbolTable::ValidSymbol(symbol)) rNameSet.Insert(symbol);
+  }
+};
+
+// set strings from event set
+void VioSymbolListWidget::setEventSet(const faudes::EventSet& rEventSet) {
+  FD_DQ("VioSymbolListWidget::setEventSet(): by eventset");
+  QStringList strings;
+  VioStyle::EventsQStrList(strings,&rEventSet);
+  setSymbolList(strings);
+}
+
+
+// behaviour: header
+void VioSymbolListWidget::setHeader(QString header) {
+  FD_DQ("VioSymbolListWidget::setHeader()");
+  mModel.setHorizontalHeaderLabels(QStringList() << header);
+};
+
+// delete selection
+void VioSymbolListWidget::userDelSelection(void) {
+  FD_DQ("VioSymbolListWidget::userDelSelection()");
+  QModelIndexList selectedindexes=selectionModel()->selectedIndexes();
+  QList<int> selectedrows;
+  foreach(QModelIndex index, selectedindexes) {
+    if(!index.isValid()) continue;
+    if(index.row()<0) continue;
+    if(index.row()>=model()->rowCount()) continue;
+    if(selectedrows.contains(index.row())) continue;
+    selectedrows.append(index.row());
+  }
+  FD_DQ("VioSymbolListWidget::DelSelection(): #" << selectedrows.size());
+  if(selectedrows.size()==0) return;
+  qSort(selectedrows);
+  int off=0;
+  QList<int>::iterator rit=selectedrows.begin();
+  for(;rit!=selectedrows.end();rit++) {
+    model()->removeRow(*rit+off);
+    off--;
+  }
+}
+
+// clear selection
+void VioSymbolListWidget::userSelectionClear(void) {
+  selectionModel()->clearSelection();
+};
+
+// get key events
+void VioSymbolListWidget::keyPressEvent(QKeyEvent *event) {
+  FD_DQ("VioSymbolListWidget::keyPressEvent(...): " << event->key());
+  // inactive
+  /*
+  QTableView::keyPressEvent(event);
+  return;
+  */
+
+  // figure where
+  int row = -1;
+  int column = -1;
+  QModelIndex index = currentIndex();
+  if(index.isValid()) row=index.row();
+  column=index.column();
+  // switch: ingnore tab navigation
+  if(event->key() == Qt::Key_Tab) {
+    event->ignore();
+    return;
+  } 
+  // switch: insert mode
+  if( (event->key() == Qt::Key_Insert) || 
+      ( (event->key() == Qt::Key_Return) && (event->modifiers() & Qt::ShiftModifier ) ) ) {
+    FD_DQ("VioSymbolLisWidget::keyPressEvent(...): Insert at row " << row+1);
+    mEditing=true;
+    mInsertMode=true;
+    userSelectionClear();
+    model()->insertRow(row+1);
+    setCurrentIndex(model()->index(row+1,0));
+    QTableView::edit(currentIndex());
+    event->accept();
+    return;
+  } 
+  // switch: edit next row
+  if( (event->key() == Qt::Key_Return) ) {
+    FD_DQ("LioVwidget::keyPressEvent(...): Next Row");
+    if(mEditing || mInsertMode) row=row+1;
+    if(mInsertMode) {
+      if(row>=model()->rowCount()) row=model()->rowCount();
+      model()->insertRow(row);
+    }
+    QModelIndex next=model()->index(row,column);
+    if(next.isValid() && (mModel.flags(next) & Qt::ItemIsEditable) ) {      
+      mEditing=true;
+      userSelectionClear();
+      setCurrentIndex(next);
+      QTableView::edit(currentIndex());
+      event->accept();
+      return;
+    }
+  } 
+  // switch: delete selection
+  if( (event->key() == Qt::Key_Delete)  || (event->key() == Qt::Key_Backspace) ) {
+    FD_DQ("LioVwidget::keyPressEvent(...): Delete");
+    mInsertMode=false;
+    mEditing=false;
+    int current=currentIndex().row();
+    userDelSelection();
+    userSelectionClear();
+    setCurrentIndex(model()->index(current,0));
+    event->accept();
+    return;
+  } 
+  // switch: call base
+  QTableView::keyPressEvent(event);
+  mInsertMode=false;
+  mEditing=false; 
+};  
+
+
+// edit hook
+bool VioSymbolListWidget::edit(const QModelIndex& index, EditTrigger trigger, QEvent* event) {
+  FD_DQ("VioSymbolListWidget::edit(" << index.row() << ", " << index.column() << ")");
+  // record for later use
+  mEditIndex=index;
+  return QTableView::edit(index,trigger,event);
+} 
+
+
+
+// edit hook
+void VioSymbolListWidget::closeEditor(QWidget* editor, QAbstractItemDelegate::EndEditHint hint) {
+  FD_DQ("VioSymbolListWidget::closeEditor(..): hint " << hint);
+  QString symbol = mDelegate->symbol(editor);
+  QModelIndex index= mDelegate->modelIndex(editor);
+  FD_DQ("VioSymbolListWidget::closeEditor(..): at(" << index.row() << ", " << index.column() << ")");
+  FD_DQ("VioSymbolListWidget::closeEditor(..): symbol " << VioStyle::StrFromQStr(symbol) );
+  // remove invalid
+  if(symbol=="")  model()->removeRow(index.row());
+  // remove doublets
+  for(int row=0; row < model()->rowCount(); row++) {
+    if(row==index.row()) continue;
+    if(model()->data(model()->index(row,0),Qt::EditRole).toString()!= symbol) continue;  
+    FD_DQ("VioSymbolListWidget::closeEditor(..): removing symbol " << VioStyle::StrFromQStr(symbol) << " in " << row );
+    model()->removeRow(row);
+  }
+  emit editingFinished();
+  emit editingFinished(index.row());
+  // pass on (incl open next)
+  QTableView::closeEditor(editor,hint);
+}
+
+// todo
+void VioSymbolListWidget::Copy(void) {};
+void VioSymbolListWidget::Paste(void) {};
+ 
+
+

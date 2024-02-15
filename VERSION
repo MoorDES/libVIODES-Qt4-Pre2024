@@ -1,0 +1,8 @@
+# libviodes
+#
+# the version string must not contain whitespace or shell escape characters
+#
+# 201606 tmoor
+
+VIODES_VERSION_MAJOR=0
+VIODES_VERSION_MINOR=83

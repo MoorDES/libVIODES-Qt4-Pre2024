@@ -1,0 +1,329 @@
+/* vionameset.cpp  - vio nameset model and widget */
+
+
+/*
+   Graphical IO for FAU Discrete Event Systems Library (libfaudes)
+
+   Copyright (C) 2009  Thomas Moor, Ruediger Berndt
+
+*/
+
+
+#include "vionameset.h"
+
+/*
+****************************************************************
+****************************************************************
+****************************************************************
+
+Implementation: VioNameSetModel
+
+****************************************************************
+****************************************************************
+****************************************************************
+*/
+
+// construct
+VioNameSetModel::VioNameSetModel(QObject* parent, VioStyle* config, bool alloc) : 
+  VioModel(parent, config, false),
+  mpFaudesNameSet(0),
+  mGeneratorModel(0) 
+{
+  FD_DQT("VioAttributModel::VioNameSetModel(): " << VioStyle::StrFromQStr(mFaudesType));
+  // have typed style
+  pNameSetStyle=dynamic_cast<const VioNameSetStyle*>(pConfig);
+  if(!pNameSetStyle) {
+    FD_WARN("VioAttributModel::VioNameSetModel(): invalid style, using default.");
+    pNameSetStyle= new VioNameSetStyle(mFaudesType);
+  }
+  // allocate faudes object and have default rep data
+  if(alloc) {
+    DoFaudesAllocate();
+    DoVioAllocate();
+    DoVioUpdate();
+  }
+  FD_DQT("VioAttributModel::VioNameSetModel(): done");
+}
+
+// destruct
+VioNameSetModel::~VioNameSetModel(void) {
+  // todo: delete style if default fall back (other VioModels have this issue too)
+}
+
+// construct on heap
+VioNameSetModel* VioNameSetModel::NewModel(QObject* parent) const {
+  FD_DQT("VioNameSetModel::NewModel(): type " << VioStyle::StrFromQStr(mFaudesType));
+  return new VioNameSetModel(parent,pConfig);
+}
+
+// construct view on heap
+VioView* VioNameSetModel::NewView(QWidget* parent) const {
+  FD_DQT("VioNameSetModel::NewView(): " << VioStyle::StrFromQStr(FaudesType()));
+  return new VioNameSetView(parent, pConfig);
+}
+
+// construct on heap
+VioWidget* VioNameSetModel::NewWidget(QWidget* parent) const {
+  FD_DQT("VioNameSetMode::NewWidget(): type " << VioStyle::StrFromQStr(FaudesType()));
+  return new VioNameSetWidget(parent, pConfig);
+}
+
+
+// allocate faudes object
+void VioNameSetModel::DoFaudesAllocate(void) {
+  FD_DQT("VioNameSetModel::DoFaudesAllocate()");
+  // let base handle this
+  VioModel::DoFaudesAllocate();
+  // impose my requirements
+  if(DoTypeCheck(mFaudesObject)) {
+    FD_DQT("VioNameSetMtcStateModel::DoFaudesAllocate(): fallback ctype");
+    if(mFaudesObject) delete mFaudesObject;
+    mFaudesObject = new faudes::NameSet();  
+  }
+}
+
+// test whether we can host this faudes object
+int VioNameSetModel::DoTypeCheck(const faudes::Type* fobject) const {  
+  // we host anything that casts to NameSet
+  if(dynamic_cast<const faudes::NameSet*>(fobject)) return 0;
+  return 1; 
+}
+
+// allocate visual model data
+void VioNameSetModel::DoVioAllocate(void) {
+  FD_DQT("VioNameSetModel::DoVioAllocate()");
+  VioModel::DoVioAllocate();
+  if(mGeneratorModel) delete mGeneratorModel;
+  mGeneratorModel= new VioGeneratorModel(this,pConfig);
+  connect(mGeneratorModel,SIGNAL(NotifyChange(void)), this, SLOT(DoFaudesUpdate(void)));
+}
+
+// update visual data from (new) faudes object
+void VioNameSetModel::DoVioUpdate(void) {
+  FD_DQT("VioNameSetModel::DoVioUpdate()");
+  // have typed reference
+  mpFaudesNameSet = dynamic_cast<faudes::NameSet*>(mFaudesObject);
+  FD_DQ("VioNameSetModel::DoVioUpdate(): " << mpFaudesNameSet->ToString());
+  // setup generator model
+  faudes::Type* fobj=mGeneratorModel->FaudesObject();
+  faudes::vGenerator* fgen=dynamic_cast<faudes::vGenerator*>(fobj);
+  if(fgen) fgen->InjectAlphabet(*mpFaudesNameSet);
+  mGeneratorModel->FaudesObject(fobj);
+  // update
+#ifdef FAUDES_DEBUG_VIO_WIDGETS
+  // call base (incl set text and notify)
+  VioModel::DoVioUpdate();
+#else
+  // we notify
+  emit NotifyAnyChange();
+#endif
+}
+
+// update set from internal generator model (dont emit signal)
+void VioNameSetModel::DoFaudesUpdate(void) {
+  FD_DQT("VioNameSetModel::DoFaudesUpdate()");
+  // apply to faudes
+  *mpFaudesNameSet= mGeneratorModel->Generator()->Alphabet();
+  mpFaudesNameSet->Name("NameSet");
+#ifdef FAUDES_DEBUG_VIO_WIDGETS
+  // update debugging stuff
+  //VioModel::DoVioUpdate(); not functional!
+#endif
+}
+
+
+// token io: implementation
+void VioNameSetModel::DoVioWrite(faudes::TokenWriter& rTw) const {
+  FD_DQT("VioNameSetModel::DoVioWrite()");
+  // begin model data
+  rTw.WriteBegin("VioData");
+  // write model data
+  if(mGeneratorModel) mGeneratorModel->Write(rTw);
+  // end model data
+  rTw.WriteEnd("VioData");
+}
+
+// token io: implementation TODO
+void VioNameSetModel::DoVioRead(faudes::TokenReader& rTr) {
+  FD_DQT("VioNameSetModel::DoVioRead()");
+  // begin tag
+  rTr.ReadBegin("VioData");
+  // read model
+  //if(mGeneratorModel) mGeneratorModel->DoVioRead();
+  // end tag
+  rTr.ReadEnd("VioData");
+  // FAKE
+  faudes::Type* fobj=mGeneratorModel->FaudesObject();
+  faudes::vGenerator* fgen=dynamic_cast<faudes::vGenerator*>(fobj);
+  if(fgen) fgen->InjectAlphabet(*mpFaudesNameSet);
+  mGeneratorModel->FaudesObject(fobj);
+}
+
+
+
+/*
+****************************************************************
+****************************************************************
+****************************************************************
+
+Implementation: VioNameSetView
+
+****************************************************************
+****************************************************************
+****************************************************************
+*/
+
+// construct
+VioNameSetView::VioNameSetView(QWidget* parent, VioStyle* config, bool alloc) : 
+  VioView(parent,config,false),
+  pNameSetModel(0),
+  mGeneratorView(0)
+{
+  FD_DQT("VioNameSetView::VioNameSetView(): " << VioStyle::StrFromQStr(FaudesType()));
+  // have typed style
+  pNameSetStyle=dynamic_cast<const VioNameSetStyle*>(pConfig);
+  if(!pNameSetStyle) {
+    FD_WARN("VioAttributView::VioNameSetModel(): invalid style, using default.");
+    pNameSetStyle= new VioNameSetStyle(mFaudesType);
+  }
+  // my alloc
+  if(alloc) DoVioAllocate();
+  FD_DQT("VioNameSetView::VioNameSetView(): done");
+}
+
+// destruct
+VioNameSetView::~VioNameSetView(void) {
+}
+
+// typed faudes object access
+const faudes::NameSet* VioNameSetView::NameSet(void) const {
+  if(!pNameSetModel) return 0;
+  return pNameSetModel->NameSet();
+}
+
+// allocate my data
+void VioNameSetView::DoVioAllocate(void) {
+  FD_DQT("VioNameSetView::DoVioAllocate(): create layout");
+  // allocate base
+  VioView::DoVioAllocate();
+  // debugging widget
+#ifdef FAUDES_DEBUG_VIO_WIDGETS
+  mTextInfo->setText(QString("NameSet \"%1\"").arg(FaudesType()));
+  mTextEdit->setReadOnly(true);
+  mApplyButton->hide();
+#endif
+  FD_DQT("VioNameSetView::DoVioAllocate(): done");
+}
+
+// update view from (new) model
+void VioNameSetView::DoVioUpdate(void) {
+  FD_DQT("VioNameSetView::DoVioUpdate(): type " << VioStyle::StrFromQStr(FaudesType()));
+  // have typed model reference (incl set to 0)
+  pNameSetModel=qobject_cast<VioNameSetModel*>(pModel);
+  // bail out on no model
+  if(!pNameSetModel) return;
+  // have my specialised generator view
+  if(!mGeneratorView) {
+    mGeneratorView = pNameSetModel->GeneratorModel()->NewView(0);
+    mVbox->addWidget(mGeneratorView);
+  }
+  // update my specialised generator view
+  mGeneratorView->Model(pNameSetModel->GeneratorModel());
+#ifdef FAUDES_DEBUG_VIO_WIDGETS
+  mTextEdit->setPlainText(VioStyle::QStrFromStr(pModel->FaudesObject()->ToText()));
+#endif
+  FD_DQT("VioNameSetView::DoVioUpdate(): done");
+}
+
+// update model from view
+void VioNameSetView::DoModelUpdate(void) {
+  FD_DQT("VioNameSetView::DoModelUpdate(): type " << VioStyle::StrFromQStr(FaudesType()));
+  // bail out if widget is not ready or model not there
+  if(!mGeneratorView || !pModel) return;
+  // update flags from check boxes
+  /* todo ...
+  VioBooleans vflags=0x0;
+  for(int i=0; i< pNameSetModel->BooleanProperties()->size(); i++) {
+    if(i>=mCheckBoxList.size()) continue; // cannot happen
+    QCheckBox* checkbox = mCheckBoxList.at(i);
+    if(checkbox->checkState()!=Qt::Checked) continue; 
+    VioBooleans vmask=pNameSetModel->BooleanProperties()->at(i).VMask();
+    FD_DQT("VioNameSetView::DoModelUpdate(): box " << i << " vmask " << vmask); 
+    vflags |=  vmask;
+  }
+  pNameSetModel->VioBool(vflags);
+  */
+}
+
+
+/*
+****************************************************************
+****************************************************************
+****************************************************************
+
+Implementation: VioNameSetWidget
+
+****************************************************************
+****************************************************************
+****************************************************************
+*/
+
+// construct
+VioNameSetWidget::VioNameSetWidget(QWidget* parent, VioStyle* config, bool alloc) : 
+  VioWidget(parent,config,false),
+  pNameSetModel(0) 
+{
+  FD_DQT("VioNameSetWidget::VioNameSetWidget(): " << VioStyle::StrFromQStr(pConfig->ConfigName()));
+  // allocate model and view
+  if(alloc) {
+    // have view
+    mView= new VioNameSetView(this,pConfig);
+    mVbox->addWidget(mView);
+    // fix typed refs and connect to widget
+    DoVioAllocate();
+    // have a model and set
+    Model(new VioNameSetModel(this,pConfig));
+  }
+  // fix modified flag
+  mModified=false;
+  FD_DQT("VioNameSetWidget::VioNameSetWidget(): done");
+}
+
+// destruct
+VioNameSetWidget::~VioNameSetWidget(void) {
+}
+
+// fix view
+void VioNameSetWidget::DoVioAllocate(void) {
+  // connect view
+  QObject::connect(mView,SIGNAL(NotifyModified(bool)),this,SLOT(ChildModified(bool)));
+  QObject::connect(mView,SIGNAL(MouseClick(const VioElement&)),this,SIGNAL(MouseClick(const VioElement&)));
+  QObject::connect(mView,SIGNAL(MouseDoubleClick(const VioElement&)),this,SIGNAL(MouseDoubleClick(const VioElement&)));
+}
+
+// set by vio model
+int VioNameSetWidget::Model(VioModel* model) {
+  FD_DQT("VioNameSet::Model(" << model << "): type " << VioStyle::StrFromQStr(FaudesType()));
+  // bail out on identity
+  if(model==mModel) return 0;
+  // call base to set view and connects
+  int res=VioWidget::Model(model);
+  // update typed ref
+  pNameSetModel=qobject_cast<VioNameSetModel*>(mModel);
+  FD_DQT("VioNameSet::Model(" << model << "): done");  
+  return res;
+}
+
+
+// typed faudes object access
+const faudes::NameSet* VioNameSetWidget::NameSet(void) const {
+  return pNameSetModel->NameSet();
+}
+
+
+
+
+
+
+
+

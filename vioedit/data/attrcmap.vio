@@ -1,0 +1,11 @@
+<VioAttributeColorMap>
+<Attribute>
+</Attribute>
+<VioData>
+<ColorMap>
+"Broken"      "Green"       
+"Done"        "Yellow"      
+"Also"        "Magenta"     
+</ColorMap>
+</VioData>
+</VioAttributeColorMap>

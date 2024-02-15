@@ -1,0 +1,180 @@
+/* vionsetstyle.cpp  - vionset configuration */
+
+
+/*
+   Graphical IO for FAU Discrete Event Systems Library (libfaudes)
+
+   Copyright (C) 2006, 2009  Thomas Moor, Klaus Schmidt, Sebastian Perk
+
+*/
+
+
+#include "vionsetstyle.h"
+#include "vionameset.h"
+/*
+ ************************************************
+ ************************************************
+ ************************************************
+
+ Implementation: VioNameSetStyle 
+
+ ************************************************
+ ************************************************
+ ************************************************
+ */
+
+
+// constructor
+VioNameSetStyle::VioNameSetStyle(const QString& ftype) : VioGeneratorStyle()
+{
+  FD_DQT("VioNameSetStyle::VioNameStyle(): ftype \"" << VioStyle::StrFromQStr(ftype) << "\"");
+  // configure 
+  Initialise(ftype);
+  ReadFile();
+};
+
+// set defaults
+void VioNameSetStyle::Initialise(const QString& ftype){
+  // record type
+  mFaudesType=ftype;
+  // attribute prototypes
+  if(mEventAttribute) delete mEventAttribute;
+  mEventAttribute=qobject_cast<VioAttributeModel*>(VioTypeRegistry::NewModel("AttributeEventFlags"));  
+  if(!mEventAttribute) {
+    std::stringstream errstr;
+    errstr << "VioDes RTI lookup error when defining " << VioStyle::StrFromQStr(ftype) << " nameset style";
+    throw faudes::Exception("VioNameSetStyle::Initialise", errstr.str(), 48);
+  }
+  // layout
+  mLayoutFlags= Alphabet | Properties;
+};
+
+// load from file
+void VioNameSetStyle::ReadFile(const QString& filename){
+  // only read the file if we have a faudes type
+  if(mFaudesType=="") return;
+  // read that file if it exists
+  std::string fname=VioStyle::StrFromQStr(filename);
+  if(fname=="") fname=VioStyle::StrFromQStr(VioStyle::ConfigFile());
+  faudes::TokenReader* trp;
+  try { 
+    FD_DQT("VioNameSetStyle::Config: read file " << fname);
+    trp = new faudes::TokenReader(fname);
+  } catch (faudes::Exception& fexcep) {
+    FD_DQT("VioNameSetStyle::Config: cannot open file " << fname);
+    return;
+  }
+  faudes::TokenReader& tr = *trp;
+  // find my section
+  try {
+    tr.SeekBegin("VioConfig");
+    tr.ReadBegin(VioStyle::StrFromQStr(mFaudesType)+"Style");
+  } catch (faudes::Exception& fexcep) {
+    FD_DQT("VioNameSetStyle::Config: no section for " << VioStyle::StrFromQStr(mFaudesType));
+    return;
+  }
+  // loop my section
+  while(!tr.Eos(VioStyle::StrFromQStr(mFaudesType)+"Style")) {
+    faudes::Token token;
+    tr.Peek(token);
+    if(token.Type()!=faudes::Token::Begin) { tr.Get(token); continue; }
+    // read my subsections: attributes
+    if(token.StringValue()=="Attribute") {
+      FD_DQT("VioNameSetStyle::Config: setting up attribute prototypes ");
+      tr.ReadBegin("Attribute");
+      if(mEventAttribute) delete mEventAttribute;
+      mEventAttribute=qobject_cast<VioAttributeModel*>(VioTypeRegistry::NewModel(VioStyle::QStrFromStr(tr.ReadString())));  
+      if(!mEventAttribute) {
+        std::stringstream errstr;
+        errstr << "VioDes RTI lookup error when defining " << VioStyle::StrFromQStr(mFaudesType) << " nameset style";
+        throw faudes::Exception("VioNameSetStyle::Initialise", errstr.str(), 48);
+      }     
+      tr.ReadEnd("Attribute");
+    }
+    // read my subsections: edit functions
+    if(token.StringValue()=="EditFunctions") {
+      tr.ReadBegin("EditFunctions");
+      VioEditFunction vfnct;
+      while(vfnct.Read(tr)) InsEditFunction(vfnct);
+      tr.ReadEnd("EditFunctions");
+      continue;
+    }
+    // skip unkown subsection
+    tr.ReadBegin(token.StringValue());
+    tr.ReadEnd(token.StringValue());
+  }
+  // done
+  tr.ReadEnd(VioStyle::StrFromQStr(mFaudesType)+"Style");
+  delete trp;
+  FD_DQT("VioNameSetStyle::Config:done ");
+}
+
+
+
+
+// register all generator styles from config file
+void VioRegisterNameSetStyles(const QString& filename) {
+  // read that file if it exists
+  std::string fname=VioStyle::StrFromQStr(filename);
+  if(fname=="") fname=VioStyle::StrFromQStr(VioStyle::ConfigFile());
+  faudes::TokenReader* trp;
+  try { 
+    FD_DQT("VioRegisterNameSetStyles: read file " << fname);
+    trp = new faudes::TokenReader(fname);
+  } catch (faudes::Exception& fexcep) {
+    FD_DQT("VioRegisterNameSetStyles: cannot open file " << fname);
+    return;
+  }
+  faudes::TokenReader& tr = *trp;
+  // find my section
+  try {
+    tr.SeekBegin("VioConfig");
+    tr.ReadBegin("NameSetStyles");
+  } catch (faudes::Exception& fexcep) {
+    FD_DQT("VioRegisterNameSetStyles: no scetion NameSetStyles");
+    return;
+  }
+  // make sure, at least Generator and EventSet are faudes registerd
+  if(!faudes::TypeRegistry::G()->Exists("Generator")) 
+    faudes::TypeRegistry::G()->Insert<faudes::cGenerator>("Generator");
+  if(!faudes::TypeRegistry::G()->Exists("EventSet")) 
+    faudes::TypeRegistry::G()->Insert<faudes::cEventSet>("EventSet");
+  // read my section
+  while(!tr.Eos("NameSetStyles")) {
+    // name of style
+    QString ftype=VioStyle::QStrFromStr(tr.ReadString());
+    FD_DQA("VioRegisterNameSetStyle(): register " << VioStyle::StrFromQStr(ftype)); 
+    // get base faudes type (defaults to name of style)
+    QString rftype=ftype;
+    faudes::Token token;
+    tr.Peek(token);
+    if(token.Type()==faudes::Token::Option) {
+      rftype=VioStyle::QStrFromStr(tr.ReadOption());
+      // remove name space faudes
+      if(rftype.startsWith("faudes::")) rftype.remove(0,QString("faudes::").length());
+    }
+    // register style as faudes type
+    if(!faudes::TypeRegistry::G()->Exists(VioStyle::StrFromQStr(ftype))) {
+      try{
+        faudes::Type* fproto=faudes::TypeRegistry::G()->NewObject(
+          VioStyle::StrFromQStr(rftype));        // exception on non ex
+        faudes::TypeRegistry::G()->Insert(
+          fproto, VioStyle::StrFromQStr(ftype)); // exception on doublets
+      } catch(faudes::Exception& fexception) {
+        std::stringstream errstr;
+        errstr << "RTI lookup error when defining " << VioStyle::StrFromQStr(ftype) << " from " << VioStyle::StrFromQStr(rftype);
+        throw faudes::Exception("VioRegisterNameSetStyle", errstr.str(), 48);
+      }
+    }
+    // construct nameset style (incl read actual configuration)
+    VioNameSetStyle* astyle = new VioNameSetStyle(ftype);
+    // construct vio prototype
+    VioNameSetModel* aproto = new VioNameSetModel(0,astyle); 
+    // register
+    VioTypeRegistry::Insert(aproto);
+    FD_DQA("VioRegisterNameSetStyle(): " << VioStyle::StrFromQStr(ftype) << ": done"); 
+  }
+  // done
+  tr.ReadEnd("NameSetStyles");
+}
+

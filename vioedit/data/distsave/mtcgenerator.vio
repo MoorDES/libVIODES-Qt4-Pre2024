@@ -1,0 +1,111 @@
+<VioMtcGenerator>
+<Generator>
+"Generator"   
+
+% 
+%  Statistics for Generator
+%  States:        3
+%  Init/Marked:   1/2
+%  Events:        1
+%  Transitions:   1
+%  StateSymbols:  0
+%  Attrib. E/S/T: 1/2/0
+% 
+
+<Alphabet>
+"alpha"       +C+           
+</Alphabet>
+
+<States>
+1             
+<Colors>
+"Black"       
+</Colors>
+2             
+<Colors>
+"Green"       "Red"         "Blue"        "Orange"      
+</Colors>
+3             
+</States>
+
+<TransRel>
+2             "alpha"       1             
+</TransRel>
+
+<InitStates>
+2             
+</InitStates>
+
+<MarkedStates>
+1             2             
+</MarkedStates>
+
+
+</Generator>
+<VioModels>
+<TransitionList>
+=AAAAAQEAAAACAAAACgBhAGwAcABoAGEAAAAB= </TransitionList>
+<StateList>
+=AAAAAwIAAAABAgAAAAICAAAAAw=== </StateList>
+<EventList>
+=AAAAAQMAAAAKAGEAbABwAGgAYQ=== </EventList>
+<GraphData>
+<States>
+<State>
+1             
+<Item>
+<Position>
+30            -140          
+</Position>
+<BasePoints>
+0             0             30            30            -50           0             
+-30.057705    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+2             
+<Item>
+<Position>
+-70           -10           
+</Position>
+<BasePoints>
+0             0             20            20            -70           -20           
+-20.023910    0             
+</BasePoints>
+</Item>
+</State>
+<State>
+3             
+<Item>
+<Position>
+-60           110           
+</Position>
+<BasePoints>
+0             0             30            30            -50           0             
+-29.999971    0             
+</BasePoints>
+</Item>
+</State>
+</States>
+<TransRel>
+<Trans>
+2             "alpha"       1             +Line+        
+<Item>
+<Position>
+-70           -10           
+</Position>
+<BasePoints>
+57.926240     -58.902892    0             0             18.292665     -23.780465    
+39.225586     -50.993262    60.140625     -78.182813    81.707335     -106.219535   
+100           -130          
+</BasePoints>
+</Item>
+</Trans>
+</TransRel>
+</GraphData>
+</VioModels>
+<VioLayout>
+0             =AAAA/wAAAAAAAAADAAABHwAAAUEAAAErAQAAAAcBAAAAAQ=== 1             299           1.181277      
+</VioLayout>
+</VioMtcGenerator>

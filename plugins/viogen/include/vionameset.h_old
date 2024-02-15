@@ -1,0 +1,204 @@
+/* vionameset.h  - vio attribute model and widget */
+
+
+/*
+   Graphical IO for FAU Discrete Event Systems Library (libfaudes)
+
+   Copyright (C) 2009  Thomas Moor, Ruediger Berndt
+
+*/
+
+
+
+#ifndef FAUDES_VIONAMESET_H
+#define FAUDES_VIONAMESET_H
+
+// std includes
+#include "viotypes.h"
+#include "vionsetstyle.h"
+#include "viogenerator.h"
+
+// win32 dll symbol export/import
+#ifndef FAUDES_VIOGEN_EXPORT
+#ifdef FAUDES_VIOGEN_BUILD
+#define FAUDES_VIOGEN_EXPORT Q_DECL_EXPORT
+#else
+#define FAUDES_VIOGEN_EXPORT Q_DECL_IMPORT
+#endif
+#endif
+
+
+
+/*
+ ************************************************
+ ************************************************
+
+ A VioNameSetModel models the representation of 
+ a faudes NameSet as an editable list.
+
+ This implementation is a hack: we use a faudes 
+ generator and set the alphabet to the name set
+ to represent. On top, we build a VioGeneratorModel
+ and this is represented by a VioGeneratorView that
+ only shows the alphabet.
+
+ ************************************************
+ ************************************************
+ */
+
+// forward
+class VioNameSetView;
+class VioNameSetWidget;
+
+
+class FAUDES_VIOGEN_EXPORT VioNameSetModel : public VioModel {
+
+Q_OBJECT
+
+public:
+
+  // construct/destruct
+  VioNameSetModel(QObject* parent=0, VioStyle* config=0, bool alloc=true);
+  virtual ~VioNameSetModel(void);
+
+  // typed acces to configuration
+  const VioNameSetStyle* NameSetConfiguration(void) const { return pNameSetStyle;};
+
+  // reimplement viomodel: construct on heap
+  virtual VioNameSetModel* NewModel(QObject* parent=0) const;
+  virtual VioView* NewView(QWidget* parent=0) const;
+  //virtual VioView* NewPropertyView(QWidget* parent=0) const;
+  virtual VioWidget* NewWidget(QWidget* parent=0) const;
+
+  // typed faudes object access
+  const faudes::NameSet* NameSet(void) const { return mpFaudesNameSet; };
+
+  // representationdata access:
+  VioGeneratorModel* GeneratorModel(void) { return mGeneratorModel; };
+
+
+protected:
+
+  // typed version of faudes object
+  faudes::NameSet* mpFaudesNameSet;
+
+  // typed style acces
+  const VioNameSetStyle* pNameSetStyle;
+
+  // reimplement viomodel: allocate faudes object and visual model data
+  virtual void DoFaudesAllocate(void);
+  virtual void DoVioAllocate(void);
+
+  // reimplement viomodel: test whether we can host this faudes object
+  virtual int DoTypeCheck(const faudes::Type* fobject) const;
+
+  // reimplement viomodel: token io
+  virtual void DoVioWrite(faudes::TokenWriter& rTw) const;
+  virtual void DoVioRead(faudes::TokenReader& rTr);
+
+  // reimplement viomodel: update visual data from (new) faudes object
+  virtual void DoVioUpdate(void);
+
+  // my representation data
+  VioGeneratorModel* mGeneratorModel;
+
+protected slots:
+
+  // upgate set from internal generator model
+  void DoFaudesUpdate(void);
+};
+
+
+/*
+ ************************************************
+ ************************************************
+
+ A VioNameSetView is a widget to represent an
+ attribute via an VioNameSetModel.
+
+ ************************************************
+ ************************************************
+ */
+
+
+
+class FAUDES_VIOGEN_EXPORT VioNameSetView : public VioView {
+
+Q_OBJECT
+
+public:
+  // construct/destruct
+  VioNameSetView(QWidget* parent=0, VioStyle* config=0, bool alloc=true);
+  virtual ~VioNameSetView(void);
+
+  // reimplement vioview: allocate view data
+  virtual void DoVioAllocate(void);
+
+  // typed faudes object access
+  const faudes::NameSet* NameSet(void) const;
+
+protected:
+
+  // reimplement vioview: update view from model
+  virtual void DoVioUpdate(void);
+
+  // reimplement vioview: update to model (exception on error)
+  virtual void DoModelUpdate(void);
+
+
+  // typed model/style
+  VioNameSetModel* pNameSetModel;
+  const VioNameSetStyle* pNameSetStyle;
+
+  // my widgets
+  VioView* mGeneratorView;
+
+protected slots:
+
+};
+
+
+/*
+ ************************************************
+ ************************************************
+
+ A VioNameSetWidget is a widget to represent an
+ faudes set by an VioNameSetView. Internally, it 
+ uses a VioNameSetModel to hold defining data.
+
+ ************************************************
+ ************************************************
+ */
+
+
+
+class FAUDES_VIOGEN_EXPORT VioNameSetWidget : public VioWidget {
+
+Q_OBJECT
+
+public:
+  // construct/destruct
+  VioNameSetWidget(QWidget* parent=0, VioStyle* config=0, bool alloc=true);
+  virtual ~VioNameSetWidget(void);
+
+  // set model
+  int Model(VioModel* model);
+  VioNameSetModel* Model(void) { return pNameSetModel; };
+
+  // typed faudes object access
+  const faudes::NameSet* NameSet(void) const;
+
+protected:
+
+  // reimplement viomodel: allocate vio model
+  virtual void DoVioAllocate(void);
+
+  // typed representation data
+  VioNameSetModel* pNameSetModel;
+
+};
+
+
+
+
+#endif

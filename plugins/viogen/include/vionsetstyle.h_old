@@ -1,0 +1,81 @@
+/* vionsetstyle.h  - vionameset configuration */
+
+
+/*
+   Graphical IO for FAU Discrete Event Systems Library (libfaudes)
+
+   Copyright (C) 2006, 2009  Thomas Moor, Klaus Schmidt, Sebastian Perk
+
+*/
+
+
+
+#ifndef FAUDES_VIONSETSTYLE_H
+#define FAUDES_VIONSETSTYLE_H
+
+#include "libviodes.h"
+#include "viogenstyle.h"
+
+// win32 dll symbol export/import
+#ifndef FAUDES_VIOGEN_EXPORT
+#ifdef FAUDES_VIOGEN_BUILD
+#define FAUDES_VIOGEN_EXPORT Q_DECL_EXPORT
+#else
+#define FAUDES_VIOGEN_EXPORT Q_DECL_IMPORT
+#endif
+#endif
+
+
+
+/*
+ ************************************************
+ ************************************************
+
+ VioNameSetStyle is derived from VioGeneratorSzyle
+ to implement alphabet view only. It is used for
+ the VioNameSetModel's internal VioGeneratorModel
+
+ On construction, the actual data will be read from 
+ the same file as the global configuration VioStyle 
+ or set to default values. 
+
+ ************************************************
+ ************************************************
+ */
+
+
+class FAUDES_VIOGEN_EXPORT VioNameSetStyle : public VioGeneratorStyle {
+
+public:
+
+  // construct/destruct
+  VioNameSetStyle(const QString& ftype="NameSet");
+  ~VioNameSetStyle(void) {};
+ 
+
+protected:
+
+  // load hard-coded default
+  virtual void Initialise(const QString& ftype);
+
+  // configuration from file
+  virtual void ReadFile(const QString& filename="");
+
+};
+
+
+/*
+ ************************************************
+ ************************************************
+
+ Register all faudes::NameSet derivates
+ found in a config file
+
+ ************************************************
+ ************************************************
+ */
+
+
+void FAUDES_VIOGEN_EXPORT VioRegisterNameSetStyles(const QString& filename="");
+
+#endif

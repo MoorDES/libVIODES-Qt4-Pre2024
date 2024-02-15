@@ -1,0 +1,54 @@
+<VioSystem>
+<Generator ftype="System">
+
+<Alphabet/>
+
+<StateSet>
+<State id="1"/>
+<State id="2"/>
+</StateSet>
+
+<TransitionRelation/>
+
+</Generator>
+<VioModels>
+<TransitionList>
+=AAAAAA=== </TransitionList>
+<StateList>
+=AAAAAgIAAAABAgAAAAI== </StateList>
+<EventList>
+=AAAAAA=== </EventList>
+<GraphData>
+<States>
+<State>
+1             
+<Item>
+<Position>
+-120           0             
+</Position>
+<BasePoints>
+0              0              30             30             -50            0             
+-29.999971     0             
+</BasePoints>
+</Item>
+</State>
+<State>
+2             
+<Item>
+<Position>
+0              0             
+</Position>
+<BasePoints>
+0              0              30             30             -50            0             
+-29.999971     0             
+</BasePoints>
+</Item>
+</State>
+</States>
+<TransRel/>
+</GraphData>
+</VioModels>
+<VioLayout>
+0             =AAAA/wAAAAAAAAADAAAAyAAAAlgAAAAAAQAAAAcBAAAAAQ===  0              150            888            1              1             
+</VioLayout>
+</VioSystem>

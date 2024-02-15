@@ -1,0 +1,61 @@
+<VioLuaFunctionDefinition> 
+<LuaFunctionDefinition name="LuaExtension::LargeGenerator"> 
+
+<Documentation> 
+Construct a generator by random.
+</Documentation> 
+<Keywords> 
+luaextension  example       
+</Keywords> 
+
+<VariantSignatures> 
+<Signature name="LargeGen(#Q,#Sigma,GRes)"> 
+<Parameter name="SizeQ" ftype="Integer" access="In"/> 
+<Parameter name="SizeSigma" ftype="Integer" access="In"/> 
+<Parameter name="Res" ftype="Generator" access="Out"/> 
+</Signature> 
+</VariantSignatures> 
+
+<LuaCode> 
+
+__VERBATIM__
+
+-- Extension reports on loading
+print('loading luaextension "LargeGenerator"')
+
+-- Define my function (mangled version of variant name)
+function LargeGen_Q_Sigma_GRes_(qn,sn,gen)
+
+
+-- Function reports on execution
+print(string.format('LargeGen(...): qn=%d sn=%d',qn,sn))
+
+-- Clear result
+gen:Clear()
+ 
+-- Set states
+for i=1,qn do
+  gen:InsState(i)
+end
+
+-- Set events
+for i=1,sn do 
+  gen:InsEvent(string.format('ev_%d',i))
+end
+
+-- By convention, we return all arguments
+return qn,sn,gen
+
+-- End of function definition
+end
+
+-- Extension reports on loading
+print('loading luaextension: done')
+
+__VERBATIM__
+</LuaCode> 
+</LuaFunctionDefinition> 
+<VioLayout> 
+1              791            792            
+</VioLayout> 
+</VioLuaFunctionDefinition> 
