@@ -1,0 +1,21 @@
+# ignore emacs backups
+*~
+*.bak
+*._*
+
+# ignore c build
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.lib
+
+# Qt locals
+*.pro.user
+
+# osx irritations
+**/.DS_Store
+
+# local archive
+local

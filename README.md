@@ -52,7 +52,7 @@ is derived from VioStyle to hold bit positions and property names. Per fType, on
 of VioAttributeStyle is required to configure VioAttributeModel objects to represent
 the respective fType.
 
-To actually show a graphical representation, each VioModel calss requiers a corresponding
+To actually show a graphical representation, each VioModel class requiers a corresponding
 VioView. The view passes on user changes via callbacks on the model. The model signals
 changes via a signal/slot mechanism to the view(s). There is also a VioWidget, that
 holds its own internal model and view. The VioViews learn about the model configuration
@@ -82,8 +82,9 @@ to design your plugin.
 
 ## Tutorial
 
-The tutorial is a simple qt application "vioedit" that loads VioModels
-from file and displays the corresponding VioView. 
+The tutorial is a simple Qt application "vioedit" that loads VioModels
+from file and displays the corresponding VioView. It is meant as a basis
+for testing ant debugging.
 
 
 ## Build System
@@ -109,12 +110,9 @@ To compile use
 ./libVIODES> make
 
 
-## AUTHORS/COPYRIGHT/LICENSE
+## Authors/Copyright/License
 
 
 The initial version of libVIODES was developped in the context of Ruediger Berndt's
-masters project. The core representation code is derived from Thomas Moor's earlier
-libviogen, a library to represent faudes generators as Qt widgets.
-Principle authors are Ruediger Berndt and Thomas Moor.
-Copyright is with the LRT DES Group and Ruediger Berndt.
-It is agreed that on some stage the sources will be released under Terms of the LGPL.
+masters project back in 2009. This version addresses the mainly type system and the plug-inmechansim.
+Actual graphical representation was merged from Thomas Moor's predecessor project VIOGen, with quite some effort for the various plug-ins. Principle authors are Thomas Moor and Ruediger Berdt, distribution is by terms of the LGPL 2.1.
