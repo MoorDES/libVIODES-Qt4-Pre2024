@@ -86,21 +86,17 @@ for testing ant debugging.
 
 ## Build System
 
-As a prerequisit, you need a configured and compiled copy of libFAUDES. This
-is expeted to be located in ./libVIODES/libFAUDES_for_viodes. For POSIX environments,
-the script copyfaudes.sh  perfroms this step
+To compile libVIODES, you will need Qt series 4 with minimum version 4.4.2. For Linux, you will need to install the Qt developper packages. For Mac OS X and Windows there exsist installer for Qt 4.8.5. For Windows, make sure that you choose the same compiler for Qt as you use for libFAUDES. Also make sure that the Qt toolset is within the PATH environment variable. 
+
+You will also need a configured and compiled copy of libFAUDES. This
+is expected to be located in `./libVIODES/libFAUDES_for_viodes`. For POSIX systems, we provide a skript `copyfaudes.sh` that performs this step:
 
     ./libVIOEDS> . ./copyfaudes.sh
 
-For Windows, you may manually copy a recent standard libFAUDES distribution or 
-compile and copy manually if you require a particular configuration.
+The script expects a plain libFAUDES next to `./libVIODES`, copies the sources to `./libVIODES/libFAUDES_for_viodes`, sets configuration options and compiles libFAUDES using the libFAUDES `makefile`. The script itselgf is a mess, however, it may serve as a documentation on which steps are recommended.  
 
-To compile, you will need Qt series 4 with minimum version 4.4.2. For Linux,
-you will need to install the Qt developper packeges. For Mac OS X and Windows
-there exsist installer for Qt 4.8.5. For Windows, make sure that you choose
-the same compiler for Qt as you use for libFAUDES. Also make sure that the
-Qt tollset is within the PATH environment variable. Once you are set, 
-compiling libVIODES is controlled by the Qt project file ./libviodes/viodes.pro. 
+Once you are set, 
+compiling libVIODES is controlled by the Qt project `./libviodes/viodes.pro`. 
 To compile use
 
     ./libVIODES> qmake viodes.pro
@@ -108,7 +104,6 @@ To compile use
 
 
 ## Authors/Copyright/License
-
 
 The initial version of libVIODES was developped in the context of Ruediger Berndt's
 masters project back in 2009. This version addresses the mainly type system and the plug-inmechansim.
