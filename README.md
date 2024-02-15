@@ -107,4 +107,4 @@ To compile use
 
 The initial version of libVIODES was developped in the context of Ruediger Berndt's
 masters project back in 2009. This version addresses the mainly type system and the plug-inmechansim.
-Actual graphical representation was merged from Thomas Moor's predecessor project VIOGen, with quite some effort for the various plug-ins. Principle authors are Thomas Moor and Ruediger Berdt, distribution is by terms of the LGPL 2.1.
+Actual graphical representation was merged from Thomas Moor's predecessor project VIOGen, with quite some effort for the various plug-ins. Principle authors are Thomas Moor and Ruediger Berdt, distribution is by terms of the LGPL 3.
