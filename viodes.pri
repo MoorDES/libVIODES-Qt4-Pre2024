@@ -4,7 +4,7 @@
 # This project file supports the configuration of Qt library projects 
 # that link against libFAUDES. It is complemented by the shell scripts 
 # "copyfaudes.sh" and "distclean.sh", operational on MacOsX and Linux 
-# platforms. Effectively, a properly configured and compiles libFAUDES
+# platforms. Effectively, a properly configured and compiled libFAUDES
 # is expected to reside in the specified path.
 # 
 # Relevant settings in this version are tailored for directory layout
@@ -44,7 +44,7 @@ QT += core gui svg
 
 
 
-# platform dependand library names
+# platform dependent library names
 unix {
   VIODES_LIBFAUDES_DSO = -L$${VIODES_LIBFAUDES} -lfaudes
   VIODES_LIBVIODES_DSO = -L$${VIODES_BASE} -lviodes
